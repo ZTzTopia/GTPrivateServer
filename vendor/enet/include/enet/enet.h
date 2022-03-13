@@ -148,7 +148,6 @@ typedef struct _ENetPacket
 {
    size_t                   referenceCount;  /**< internal use only */
    enet_uint32              flags;           /**< bitwise-or of ENetPacketFlag constants */
-   enet_uint32              pad;             /**< wtf is here? */
    enet_uint8 *             data;            /**< allocated data for packet */
    size_t                   dataLength;      /**< length of data */
    ENetPacketFreeCallback   freeCallback;    /**< function to be called when the packet is no longer in use */
@@ -394,6 +393,7 @@ typedef struct _ENetHost
    size_t               maximumPacketSize;           /**< the maximum allowable packet size that may be sent or received on a peer */
    size_t               maximumWaitingData;          /**< the maximum aggregate amount of buffer space a peer may use waiting for packets to be delivered */
    uint8_t              usingNewPacket;              /**< the New and Improved! */
+   uint8_t              usingNewPacketForServer;     /**< the New and Improved! */
 } ENetHost;
 
 /**
