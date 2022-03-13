@@ -1017,11 +1017,13 @@ enet_protocol_handle_incoming_commands (ENetHost * host, ENetEvent * event)
           return 0;
         if ((ENET_NET_TO_HOST_16(newHeader -> integrity[2]) % 2) != 1)
           return 0;
+        if (ENET_NET_TO_HOST_16(newHeader -> integrity[2]) <= 0x7FFF)
+          return 0;
+        if ((ENET_NET_TO_HOST_16(newHeader -> integrity[2]) & 0x9005 | 0x67DA) != 0xF7DF)
+          return 0;
         if ((ENET_NET_TO_HOST_16(newHeader -> integrity[2]) | 0x67DA) != 0xF7DF)
           return 0;
         if ((ENET_NET_TO_HOST_16(newHeader -> integrity[2]) & 0x9005) != 0x9005)
-          return 0;
-        if ((ENET_NET_TO_HOST_16(newHeader -> integrity[2]) & 0x9005 | 0x67DA) < 0x8FFF)
           return 0;
 
         header = (ENetProtocolHeader*)(host -> receivedData + 6);
