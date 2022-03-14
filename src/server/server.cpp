@@ -25,7 +25,7 @@ namespace server {
         m_peers.emplace_back(peer);
 
         spdlog::info("Client connected: {}", peer->address.host);
-        send_packet(peer, NET_MESSAGE_SERVER_HELLO, "1");
+        send_packet(peer, NET_MESSAGE_SERVER_HELLO, "");
     }
 
     void Server::on_receive(ENetPeer *peer, ENetPacket *packet) {

@@ -22,7 +22,7 @@ else()
     FetchContent_Declare(
             spdlog
             GIT_REPOSITORY https://github.com/gabime/spdlog.git
-            GIT_TAG 2f2d04b3e840428a18942ca2d3d65203ec564647)
+            GIT_TAG b1478d98f017f3a7644e6e3a16fab6a47a5c26ba)
 
     FetchContent_GetProperties(spdlog)
     if(NOT spdlog_POPULATED)
