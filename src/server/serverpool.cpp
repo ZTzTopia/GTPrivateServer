@@ -50,7 +50,7 @@ namespace server {
     void ServerPool::on_receive(ENetPeer *peer, ENetPacket *packet) {
         for (auto it = m_servers.begin(); it != m_servers.end(); it++) {
             Server *server = *it;
-            if (server->is_peer_in_server(peer)) {
+            if (peer->connectID != 0 && server->is_peer_in_server(peer->connectID)) {
                 // TODO: We need to checking here if the packet enter world.
                 server->on_receive(peer, packet);
             }
@@ -60,7 +60,7 @@ namespace server {
     void ServerPool::on_disconnect(ENetPeer *peer) {
         for (auto it = m_servers.begin(); it != m_servers.end(); it++) {
             Server *server = *it;
-            if (server->is_peer_in_server(peer)) {
+            if (peer->connectID != 0 && server->is_peer_in_server(peer->connectID)) {
                 server->on_disconnect(peer);
             }
         }

@@ -8,6 +8,12 @@ add_executable(${PROJECT_NAME}
 
         enetwrapper/enetserver.cpp
 
+        player/eventmanager.cpp
+        player/eventtrigger.cpp
+        player/generictextevent.cpp
+        player/playerpool.cpp
+        player/player.cpp
+
         server/serverpool.cpp
         server/server.cpp)
 

@@ -29,7 +29,7 @@ namespace server {
     };
 
     inline ServerPool *get_server_pool() {
-        static auto *server_pool = new ServerPool();
+        static auto *server_pool = new ServerPool{};
         return server_pool;
     }
 }

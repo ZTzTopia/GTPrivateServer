@@ -10,7 +10,7 @@
 std::atomic<bool> running{ true };
 
 int main() {
-    spdlog::set_level(spdlog::level::debug);
+    spdlog::set_level(spdlog::level::trace);
     spdlog::set_pattern("[%Y-%m-%dT%TZ] [%n] [%^%l%$] [thread %t] %v");
 
     spdlog::info("Growtopia Private Server.");
@@ -50,7 +50,8 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    spdlog::info("Shutting down...");
+
     exit_thread.join();
     http.join();
 
