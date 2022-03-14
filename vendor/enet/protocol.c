@@ -1025,6 +1025,11 @@ enet_protocol_handle_incoming_commands (ENetHost * host, ENetEvent * event)
           return 0;
         if ((ENET_NET_TO_HOST_16(newHeader -> integrity[2]) & 0x9005) != 0x9005)
           return 0;
+        // If the client not seed the rand.
+        if ((ENET_NET_TO_HOST_16(newHeader -> integrity[2]) | 0xF7DF) == 0xF7FF)
+          return 0;
+        if (ENET_NET_TO_HOST_16(newHeader -> integrity[2]) == 0xD547)
+          return 0;
 
         header = (ENetProtocolHeader*)(host -> receivedData + 6);
     }
