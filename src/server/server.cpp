@@ -68,8 +68,11 @@ namespace server {
                     packet_.packet_type = player::PACKET_SEND_ITEM_DATABASE_DATA;
                     packet_.netid = -1;
                     packet_.flags |= 0x8;
-                    packet_.data_extended_size = items::get_items_db()->get_size();
+                    packet_.unk8 = items::get_items_db()->get_size();
+                    packet_.data_extended_size = compressed_size;
                     player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, &packet_, sizeof(player::GameUpdatePacket), compressed_data, ENET_PACKET_FLAG_RELIABLE);
+
+                    delete[] compressed_data;
                     break;
                 }
 
