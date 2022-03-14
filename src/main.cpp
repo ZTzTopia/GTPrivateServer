@@ -5,9 +5,10 @@
 
 #include "enetwrapper/enetserver.h"
 #include "http/http.h"
+#include "items/itemsdb.h"
 #include "server/serverpool.h"
 
-std::atomic<bool> running{ true };
+static std::atomic<bool> running{ true };
 
 int main() {
     spdlog::set_level(spdlog::level::trace);
@@ -15,8 +16,10 @@ int main() {
 
     spdlog::info("Growtopia Private Server.");
 
+    // ==================================================================================================
+
     std::thread exit_thread{
-        [&] {
+        [] {
             std::string command;
             while (std::cin >> command) {
                 if (command == "exit" || command == "quit" || command == "stop") {
@@ -27,7 +30,15 @@ int main() {
         }
     };
 
+    // ==================================================================================================
+
+    items::get_items_db()->init();
+
+    // ==================================================================================================
+
     std::thread http{ http::HTTP::create_server_data, std::ref(running) };
+
+    // ==================================================================================================
 
     if (enetwrapper::ENetServer::one_time_init() != 0) {
         spdlog::error("Failed to initialize ENet.");
@@ -35,6 +46,8 @@ int main() {
     }
 
     server::get_server_pool()->new_server();
+
+    // ==================================================================================================
 
     const auto signal_handler{
         [](int sig) {
@@ -46,9 +59,13 @@ int main() {
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
 
+    // ==================================================================================================
+
     while (running.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+
+    // ==================================================================================================
 
     spdlog::info("Shutting down...");
 

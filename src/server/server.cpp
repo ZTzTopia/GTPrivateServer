@@ -2,6 +2,9 @@
 
 #include "server.h"
 #include "../player/playerpool.h"
+#include "../proton/shared/util/Variant.h"
+#include "../items/itemsdb.h"
+#include "../proton/shared/util/ResourceUtils.h"
 
 namespace server {
     Server::Server() : m_peer_count(0) {
@@ -55,19 +58,35 @@ namespace server {
         spdlog::info("Type {}", type);
         switch (type) {
             case player::NET_MESSAGE_GENERIC_TEXT:
+                spdlog::info("Text {}", player::get_text(packet));
+
+                if (std::string(player::get_text(packet)).find("action|refresh_item_data\n") != std::string::npos) {
+                    int compressed_size;
+                    uint8_t *compressed_data = zlibDeflateToMemory(items::get_items_db()->get_data(), static_cast<int>(items::get_items_db()->get_size()), &compressed_size);
+
+                    player::GameUpdatePacket packet_{};
+                    packet_.packet_type = player::PACKET_SEND_ITEM_DATABASE_DATA;
+                    packet_.netid = -1;
+                    packet_.flags |= 0x8;
+                    packet_.data_extended_size = items::get_items_db()->get_size();
+                    player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, &packet_, sizeof(player::GameUpdatePacket), compressed_data, ENET_PACKET_FLAG_RELIABLE);
+                    break;
+                }
+
                 player->process_generic_text(std::string(player::get_text(packet)));
                 break;
             case player::NET_MESSAGE_GAME_MESSAGE:
+                spdlog::info("Text {}", player::get_text(packet));
                 // player->process_game_message(player::get_text(packet));
                 break;
             case player::NET_MESSAGE_GAME_PACKET:
+                spdlog::info("Packet type {}", player::get_struct(packet)->packet_type);
                 // player->process_game_packet(player::get_struct(packet));
                 break;
             default:
                 spdlog::error("Unknown message type: {}", type);
                 break;
         }
-        // spdlog::info("Text {}", player::get_text(packet));
     }
 
     void Server::on_disconnect(ENetPeer *peer) {

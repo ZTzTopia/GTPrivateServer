@@ -72,11 +72,15 @@ namespace player {
         PACKET_MAXVAL
     };
 
+#pragma pack(push, 1)
     struct GameUpdatePacket {
-        ePacketType packet_type; // 0
-        uint32_t unk4; // 4
+        uint8_t packet_type; // 0
+        uint8_t unk1; // 1
+        uint8_t unk2; // 2
+        uint8_t unk3; // 3
+        uint32_t netid; // 4
         uint32_t unk5; // 8
-        uint32_t unk6; // 12
+        uint32_t flags; // 12
         uint32_t unk7; // 16
         uint32_t unk8; // 20
         float unk9; // 24
@@ -86,9 +90,9 @@ namespace player {
         float unk13; // 40
         uint32_t unk14; // 44
         uint32_t unk15; // 48
-        int32_t data_extended_length; // 52
-        uint32_t data_extended; // 56
+        uint32_t data_extended_size; // 52
     };
+#pragma pack(pop)
 
     inline eNetMessageType get_message_type(ENetPacket *packet) {
         if (packet->dataLength > 3) {
@@ -103,7 +107,37 @@ namespace player {
         return (char*)(packet->data + 4);
     }
 
-    inline char *get_struct(ENetPacket *packet, int length);
-    inline GameUpdatePacket *get_struct(ENetPacket *packet);
-    inline uint8_t *get_extended_data(GameUpdatePacket *gameUpdatePacket);
+    inline char *get_struct(ENetPacket *packet, int length) {
+        if (packet->dataLength >= length + 4) {
+            return (char*)(packet->data + 4);
+        }
+
+        return nullptr;
+    }
+
+    inline GameUpdatePacket *get_struct(ENetPacket *packet) {
+        if (packet->dataLength >= sizeof(GameUpdatePacket)) {
+            auto *game_update_packet = (GameUpdatePacket*)(packet->data + 4);
+            if ((game_update_packet->flags & 8) == 0) {
+                game_update_packet->data_extended_size = 0;
+            }
+            else {
+                if (packet->dataLength < game_update_packet->data_extended_size + sizeof(GameUpdatePacket)) {
+                    return nullptr;
+                }
+            }
+
+            return game_update_packet;
+        }
+
+        return nullptr;
+    }
+
+    inline uint8_t *get_extended_data(GameUpdatePacket *game_update_packet) {
+        if ((game_update_packet->flags & 8) != 0) {
+            return reinterpret_cast<uint8_t *>((game_update_packet + 56));
+        }
+
+        return nullptr;
+    }
 }
