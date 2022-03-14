@@ -36,16 +36,16 @@ namespace http {
                 return;
             }
 
-            fd_set set = {};
-            FD_ZERO(&set);
-            FD_SET(sockfd, &set);
-
-            timeval timeout = {};
-            timeout.tv_sec = 10;
-            timeout.tv_usec = 0;
-
             // This not good right??
             while (running.load()) {
+                fd_set set = {};
+                FD_ZERO(&set);
+                FD_SET(sockfd, &set);
+
+                timeval timeout = {};
+                timeout.tv_sec = 10;
+                timeout.tv_usec = 0;
+
                 int ret = select((int) sockfd + 1, &set, nullptr, nullptr, &timeout);
                 if (ret == -1 || ret == 0) {
                     continue;
