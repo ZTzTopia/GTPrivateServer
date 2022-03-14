@@ -5,7 +5,11 @@ include(FetchContent)
 
 add_executable(${PROJECT_NAME}
         main.cpp
-        enetwrapper/enetserver.cpp)
+
+        enetwrapper/enetserver.cpp
+
+        server/serverpool.cpp
+        server/server.cpp)
 
 target_link_libraries(${PROJECT_NAME} enet)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/enet/include)

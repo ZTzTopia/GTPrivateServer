@@ -1108,7 +1108,7 @@ enet_protocol_handle_incoming_commands (ENetHost * host, ENetEvent * event)
        peer -> address.port = host -> receivedAddress.port;
        peer -> incomingDataTotal += host -> receivedDataLength;
     }
-    
+
     currentData = host -> receivedData + headerSize;
 
     while (currentData < & host -> receivedData [host -> receivedDataLength])
