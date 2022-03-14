@@ -21,30 +21,32 @@ namespace http {
                 return;
             }
 
-            struct sockaddr_in addr{};
+            struct sockaddr_in addr = {};
             addr.sin_family = AF_INET;
             addr.sin_port = htons(80);
             addr.sin_addr.S_un.S_addr = INADDR_ANY;
 
             if (bind(sockfd, (sockaddr*)&addr, sizeof(addr)) == -1) {
+                closesocket(sockfd);
                 return;
             }
 
             if (listen(sockfd, 32) == -1) {
+                closesocket(sockfd);
                 return;
             }
 
-            fd_set set{};
+            fd_set set = {};
             FD_ZERO(&set);
             FD_SET(sockfd, &set);
 
-            struct timeval timeout{};
-            timeout.tv_sec = 3;
+            timeval timeout = {};
+            timeout.tv_sec = 10;
             timeout.tv_usec = 0;
 
             // This not good right??
             while (running.load()) {
-                int ret = select(0, &set, nullptr, nullptr, &timeout);
+                int ret = select((int) sockfd + 1, &set, nullptr, nullptr, &timeout);
                 if (ret == -1 || ret == 0) {
                     continue;
                 }
@@ -97,6 +99,7 @@ namespace http {
                 closesocket(new_sockfd);
             }
 
+            closesocket(sockfd);
             WSACleanup();
         }
     };
