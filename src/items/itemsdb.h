@@ -9,7 +9,7 @@ namespace items {
         ItemsDB();
         ~ItemsDB();
 
-        void init();
+        int init();
 
         uint32_t get_hash() const { return m_hash; }
         uint8_t *get_data() const { return m_data; }

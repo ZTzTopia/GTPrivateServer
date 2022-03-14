@@ -51,10 +51,10 @@ namespace items {
         return hash;
     }
 
-    void ItemsDB::init() {
+    int ItemsDB::init() {
         std::ifstream file("./items.dat", std::ifstream::in | std::ifstream::binary);
         if (!file.is_open()) {
-            return;
+            return -1;
         }
 
         std::streamoff begin = file.tellg();
@@ -75,7 +75,7 @@ namespace items {
         int32_t mem_pos = 2;
 
         if (m_version > 14) {
-            return;
+            return -1;
         }
 
         std::memcpy(&m_item_count, m_data + mem_pos, 4);
@@ -267,5 +267,7 @@ namespace items {
 
             m_items.emplace_back(std::move(item_info));
         }
+
+        return 0;
     }
 }
