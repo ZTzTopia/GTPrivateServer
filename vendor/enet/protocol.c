@@ -1026,34 +1026,29 @@ enet_protocol_handle_incoming_commands (ENetHost * host, ENetEvent * event)
           return 0;
         if ((ENET_NET_TO_HOST_16(newHeader -> integrity[2]) & 0x9005) != 0x9005)
           return 0;
+
+        peerID = ENET_NET_TO_HOST_16(newHeader->peerID);
+        peerID &= ~ (ENET_PROTOCOL_HEADER_FLAG_MASK | ENET_PROTOCOL_HEADER_SESSION_MASK);
+        
         // If the client not seed the rand.
         if ((ENET_NET_TO_HOST_16(newHeader -> integrity[2]) | 0xF7DF) == 0xF7FF)
         {
-            if (newHeader->peerID)
-              blockPeerID[ENET_NET_TO_HOST_16(newHeader->peerID)] = 1;
-
-            return 0;
+          blockPeerID[peerID] = 1;
+          return 0;
         }
         if (ENET_NET_TO_HOST_16(newHeader -> integrity[2]) == 0xD547) // I never got this value if seed the rand.
         {
-          if (newHeader->peerID)
-            blockPeerID[ENET_NET_TO_HOST_16(newHeader->peerID)] = 1;
-
+          blockPeerID[peerID] = 1;
           return 0;
         }
         if (ENET_NET_TO_HOST_16(newHeader -> integrity[2]) == 0xB3C7)
         {
-          if (newHeader->peerID && blockPeerID[ENET_NET_TO_HOST_16(newHeader->peerID)] == 1)
-            blockPeerID[ENET_NET_TO_HOST_16(newHeader->peerID)] = 2;
-
+          blockPeerID[peerID] = 2;
           return 0;
         }
 
-        if (newHeader->peerID)
-        {
-          if (blockPeerID[ENET_NET_TO_HOST_16(newHeader->peerID)] == 2)
-            return 0;
-        }
+        if (blockPeerID[peerID] == 2)
+          return 0;
 
         header = (ENetProtocolHeader*)(host -> receivedData + 6);
     }
