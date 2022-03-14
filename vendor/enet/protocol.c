@@ -999,6 +999,7 @@ enet_protocol_handle_incoming_commands (ENetHost * host, ENetEvent * event)
         return 0;
 
     // Trying to use new packet for server.
+    static int blockPeerID[] = { 0 };
     if (host -> usingNewPacketForServer) {
         newHeader = (ENetNewProtocolHeader*)host -> receivedData;
 
@@ -1027,9 +1028,32 @@ enet_protocol_handle_incoming_commands (ENetHost * host, ENetEvent * event)
           return 0;
         // If the client not seed the rand.
         if ((ENET_NET_TO_HOST_16(newHeader -> integrity[2]) | 0xF7DF) == 0xF7FF)
+        {
+            if (newHeader->peerID)
+              blockPeerID[ENET_NET_TO_HOST_16(newHeader->peerID)] = 1;
+
+            return 0;
+        }
+        if (ENET_NET_TO_HOST_16(newHeader -> integrity[2]) == 0xD547) // I never got this value if seed the rand.
+        {
+          if (newHeader->peerID)
+            blockPeerID[ENET_NET_TO_HOST_16(newHeader->peerID)] = 1;
+
           return 0;
-        if (ENET_NET_TO_HOST_16(newHeader -> integrity[2]) == 0xD547)
+        }
+        if (ENET_NET_TO_HOST_16(newHeader -> integrity[2]) == 0xB3C7)
+        {
+          if (newHeader->peerID && blockPeerID[ENET_NET_TO_HOST_16(newHeader->peerID)] == 1)
+            blockPeerID[ENET_NET_TO_HOST_16(newHeader->peerID)] = 2;
+
           return 0;
+        }
+
+        if (newHeader->peerID)
+        {
+          if (blockPeerID[ENET_NET_TO_HOST_16(newHeader->peerID)] == 2)
+            return 0;
+        }
 
         header = (ENetProtocolHeader*)(host -> receivedData + 6);
     }
