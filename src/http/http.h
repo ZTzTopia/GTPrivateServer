@@ -4,20 +4,30 @@
 #include <WinSock2.h>
 
 namespace http {
+#ifndef _WIN32
+#define INVALID_SOCKET -1
+#endif
+
     class HTTP {
     public:
         HTTP() = default;
         ~HTTP() = default;
 
-        // TODO: Linux support.
-        static void create_server_data(std::atomic<bool> &running) {
+        static void create_server_data(std::atomic<bool> &running, enet_uint16 server_gateway_port, uint8_t server_gateway_count) {
+#ifdef _WIN32
             WSADATA wsa_data;
             if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
                 return;
             }
+#endif
 
-            SOCKET sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-            if (sockfd == -1) {
+#ifdef _WIN32
+            SOCKET sockfd;
+#else
+            int sockfd;
+#endif
+            sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+            if (sockfd == INVALID_SOCKET) {
                 return;
             }
 
@@ -52,27 +62,37 @@ namespace http {
                 }
 
                 int sizeof_sin = sizeof(addr);
-                SOCKET new_sockfd = accept(sockfd, (SOCKADDR *)&addr, &sizeof_sin);
+#ifdef _WIN32
+                SOCKET new_sockfd;
+#else
+                int new_sockfd;
+#endif
+                new_sockfd = accept(sockfd, (SOCKADDR *)&addr, &sizeof_sin);
 
                 char buffer[1024];
                 if (recv(new_sockfd, buffer, sizeof(buffer), 0) > 0) {
-                    // Growtopia use http version 1.0.
-                    if (strstr(buffer, "HTTP/1.0") != nullptr && strstr(buffer, "POST /growtopia/server_data.php") != nullptr) {
-                        // We know growtopia not do like this, this why growtopia named the file is php.
+                    if (strstr(buffer, "/growtopia/server_data.php") != nullptr) {
                         std::string http_body{
                             "server|127.0.0.1\r\n"
-                            "port|17256\r\n"
+                            "port|"
+                        };
+
+                        http_body.append(std::to_string(server_gateway_port + (rand() % (server_gateway_count + 1))));
+                        http_body.append("\r\n");
+                        http_body.append(
                             "type|1\r\n"
                             "#maint|Server is under maintenance. We will be back online shortly. Thank you for your patience!\r\n"
                             "type2|1\r\n" // Tell client to use new packet.
                             "meta|defined\r\n"
                             "RTENDMARKERBS1001"
-                        };
+                        );
+
                         std::string http_header{
                             "HTTP/1.0 200 OK\r\n"
                             "Content-Type: text/html\r\n"
                             "Content-Length: "
                         };
+
                         http_header.append(std::to_string(http_body.size()));
                         http_header.append("\r\n\r\n");
                         http_header.append(http_body);
@@ -83,11 +103,13 @@ namespace http {
                         std::string http_body{
                             "<!DOCTYPE html>\r\n<html>\r\n<body>\r\nHello, World!\r\n</body>\r\n</html>"
                         };
+
                         std::string http_header{
                             "HTTP/1.1 200 OK\r\n"
                             "Content-Type: text/html\r\n"
                             "Content-Length: "
                         };
+
                         http_header.append(std::to_string(http_body.size()));
                         http_header.append("\r\n\r\n");
                         http_header.append(http_body);
@@ -100,7 +122,9 @@ namespace http {
             }
 
             closesocket(sockfd);
+#ifdef _WIN32
             WSACleanup();
+#endif
         }
     };
 }

@@ -11,12 +11,16 @@ namespace items {
 
         int init();
 
-        uint32_t get_hash() const { return m_hash; }
-        uint8_t *get_data() const { return m_data; }
-        uint32_t get_size() const { return m_data_size; }
+        [[nodiscard]] uint32_t get_hash() const { return m_hash; }
+
+        [[nodiscard]] uint32_t get_size() const { return m_data_size; }
+        [[nodiscard]] uint8_t *get_data() const { return m_data; }
+
+        [[nodiscard]] uint32_t get_compressed_size() const { return m_compressed_data_size; }
+        [[nodiscard]] uint8_t *get_compressed_data() const { return m_compressed_data; }
 
     private:
-        std::vector<ItemInfo> m_items;
+        std::vector<ItemInfo *> m_items;
 
         uint32_t m_item_count;
         uint16_t m_version;
@@ -24,6 +28,8 @@ namespace items {
         uint32_t m_hash;
         uint32_t m_data_size;
         uint8_t *m_data;
+        uint32_t m_compressed_data_size;
+        uint8_t *m_compressed_data;
     };
 
     inline ItemsDB *get_items_db() {

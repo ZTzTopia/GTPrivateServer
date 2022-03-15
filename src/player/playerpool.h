@@ -8,9 +8,9 @@ namespace player {
     class PlayerPool {
     public:
         PlayerPool() = default;
-        ~PlayerPool() = default;
+        ~PlayerPool();
 
-        void new_player(ENetPeer* peer);
+        Player *new_player(ENetPeer* peer);
         void add_player(Player *player);
         void remove_player(Player *player);
         void remove_player(enet_uint32 connect_id);

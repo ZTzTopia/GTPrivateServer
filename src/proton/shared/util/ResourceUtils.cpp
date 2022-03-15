@@ -1,5 +1,4 @@
 #include <cassert>
-#include <cstring>
 #include <zlib.h>
 
 #include "ResourceUtils.h"

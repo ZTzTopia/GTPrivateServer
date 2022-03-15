@@ -1,8 +1,19 @@
 #include "serverpool.h"
 
 namespace server {
-    void ServerPool::new_server() {
-        auto *server = new Server{};
+    ServerPool::~ServerPool() {
+        for (auto &server : m_servers) {
+            delete server;
+        }
+
+        m_servers.clear();
+    }
+
+    void ServerPool::new_server(enet_uint16 port, size_t max_peer) {
+        auto *server = new Server{
+            port,
+            max_peer
+        };
         add_server(server);
     }
 
@@ -11,7 +22,13 @@ namespace server {
     }
 
     void ServerPool::remove_server(Server *server) {
+        if (!server) {
+            return;
+        }
+
+        delete server;
         m_servers.erase(std::remove(m_servers.begin(), m_servers.end(), server), m_servers.end());
+        m_servers.shrink_to_fit();
     }
 
     void ServerPool::remove_server(int index) {
@@ -19,7 +36,9 @@ namespace server {
             return;
         }
 
+        delete m_servers.at(index);
         m_servers.erase(m_servers.begin() + index);
+        m_servers.shrink_to_fit();
     }
 
     Server *ServerPool::get_server(int index) {
@@ -36,33 +55,5 @@ namespace server {
 
     size_t ServerPool::get_server_count() {
         return m_servers.size();
-    }
-
-    void ServerPool::on_connect(ENetPeer *peer) {
-        for (auto it = m_servers.begin(); it != m_servers.end(); it++) {
-            Server *server = *it;
-            if (server->get_peer_count() < 32) {
-                server->on_connect(peer);
-            }
-        }
-    }
-
-    void ServerPool::on_receive(ENetPeer *peer, ENetPacket *packet) {
-        for (auto it = m_servers.begin(); it != m_servers.end(); it++) {
-            Server *server = *it;
-            if (peer->connectID != 0 && server->is_peer_in_server(peer->connectID)) {
-                // TODO: We need to checking here if the packet enter world.
-                server->on_receive(peer, packet);
-            }
-        }
-    }
-
-    void ServerPool::on_disconnect(ENetPeer *peer) {
-        for (auto it = m_servers.begin(); it != m_servers.end(); it++) {
-            Server *server = *it;
-            if (peer->connectID != 0 && server->is_peer_in_server(peer->connectID)) {
-                server->on_disconnect(peer);
-            }
-        }
     }
 }

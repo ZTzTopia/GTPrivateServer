@@ -25,14 +25,17 @@ namespace player {
         m_events.erase(std::hash<std::string>{}(event_name));
     }
 
-    void EventTrigger::trigger(const std::string &event_name) {
+    bool EventTrigger::trigger(const std::string &event_name) {
         if (event_name.empty()) {
-            return;
+            return false;
         }
 
         auto it = m_events.find(std::hash<std::string>{}(event_name));
         if (it != m_events.end()) {
             it->second();
+            return true;
         }
+
+        return false;
     }
 }

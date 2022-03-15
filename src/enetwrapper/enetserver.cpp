@@ -1,13 +1,25 @@
 #include <string>
-#include <thread>
 
 #include "enetserver.h"
-#include "../server/serverpool.h"
 
 namespace enetwrapper {
-    ENetServer::ENetServer() : m_host(nullptr) {}
+    ENetServer::ENetServer() : m_host(nullptr) {
+        m_running.store(false);
+    }
 
     ENetServer::~ENetServer() {
+        if (!m_running.load()) {
+            return;
+        }
+
+        m_running.store(false);
+        m_service_thread.join();
+
+        ENetPeer *currentPeer;
+        for (currentPeer = m_host->peers; currentPeer < &m_host->peers[m_host->peerCount]; ++currentPeer) {
+            enet_peer_disconnect_now(currentPeer, 0);
+        }
+
         if (m_host) {
             enet_host_destroy(m_host);
         }
@@ -51,22 +63,23 @@ namespace enetwrapper {
 
     void ENetServer::start_service() {
         std::thread thread{ &ENetServer::service_thread, this };
-        thread.detach();
+        m_service_thread = std::move(thread);
     }
 
     void ENetServer::service_thread() {
-        while (true) {
+        m_running.store(true);
+        while (m_running.load()) {
             ENetEvent event;
-            if (enet_host_service(m_host, &event, 1000) > 0) {
+            if (enet_host_service(m_host, &event, 0) > 0) {
                 switch (event.type) {
                     case ENET_EVENT_TYPE_CONNECT:
-                        server::get_server_pool()->on_connect(event.peer);
+                        on_connect(event.peer);
                         break;
                     case ENET_EVENT_TYPE_RECEIVE:
-                        server::get_server_pool()->on_receive(event.peer, event.packet);
+                        on_receive(event.peer, event.packet);
                         break;
                     case ENET_EVENT_TYPE_DISCONNECT:
-                        server::get_server_pool()->on_disconnect(event.peer);
+                        on_disconnect(event.peer);
                         break;
                     default:
                         break;

@@ -5,16 +5,35 @@ namespace player {
     Player::Player(ENetPeer *peer)
         : EventTrigger()
         , m_peer(peer) {
+        // no warning k.
+        struct wow {
+            enet_uint32 connect_id;
+        };
+
+        // use this pointer???
+        wow * ww = new wow {};
+        ww->connect_id = peer->connectID;
+        peer->data = ww;
+
         EventManager::load(this);
     }
 
-    enet_uint32 Player::get_connect_id() const {
-        return m_peer->connectID;
-    }
-
-    void Player::process_generic_text(const std::string &text) {
+    void Player::process_generic_text_or_game_message(const std::string &text) {
         m_last_packet_text = text;
-        trigger(text.substr(0, text.find('|')));
+
+        std::string first_text{ text.substr(0, text.find('|')) };
+        if (first_text == "action") {
+            std::string action_text{ text.substr(text.find('|') + 1, text.find('\n') - (text.find('|') + 1)) };
+            if (!trigger(action_text)) {
+                spdlog::error("Unhandled action: {}", action_text.c_str());
+            }
+        }
+        else {
+            if (!trigger(first_text)) {
+                spdlog::error("Unhandled generic text: {}", first_text.c_str());
+            }
+        }
+
         m_last_packet_text.clear();
     }
 
@@ -59,6 +78,30 @@ namespace player {
                 enet_packet_destroy(packet);
             }
         }
+
+        return ret;
+    }
+
+    int Player::send_variant(VariantList &&variant_list, enet_uint32 flags) {
+        if (variant_list.Get(0).GetType() == eVariantType::TYPE_UNUSED) {
+            return -1;
+        }
+
+        auto *game_update_packet = new GameUpdatePacket{};
+
+        uint32_t data_size;
+        uint8_t *data = variant_list.SerializeToMem(&data_size, nullptr);
+
+        game_update_packet->packet_type = PACKET_CALL_FUNCTION;
+        game_update_packet->net_id = -1;
+        game_update_packet->flags |= 0x8;
+        game_update_packet->data_extended_size = data_size;
+        game_update_packet->data_extended = reinterpret_cast<uint32_t&>(data);
+
+        int ret{ send_raw_packet(NET_MESSAGE_GAME_PACKET, game_update_packet, sizeof(GameUpdatePacket) - 4, data, flags) };
+
+        delete data;
+        delete game_update_packet;
 
         return ret;
     }

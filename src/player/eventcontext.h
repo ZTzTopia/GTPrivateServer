@@ -7,7 +7,7 @@ namespace player {
         explicit EventContext(Player *player) { m_player = player; }
         ~EventContext() = default;
 
-        Player *get_player() const { return m_player; }
+        [[nodiscard]] Player *get_player() const { return m_player; }
 
     private:
         Player *m_player;
