@@ -10,7 +10,7 @@ VariantDB::~VariantDB() {
 
 void VariantDB::DeleteAll() {
     {
-        dataList::iterator itor = m_data.begin();
+        auto itor = m_data.begin();
         while (itor != m_data.end()) {
             if (itor->second) {
                 delete (itor->second);
@@ -24,7 +24,7 @@ void VariantDB::DeleteAll() {
     m_data.clear();
 
     { // So I can use "itor" again
-        functionList::iterator itor = m_functionData.begin();
+        auto itor = m_functionData.begin();
         while (itor != m_functionData.end()) {
             delete (itor->second);
             itor++;
@@ -35,15 +35,15 @@ void VariantDB::DeleteAll() {
 }
 
 
-int VariantDB::DeleteVar(std::string keyName) {
+int VariantDB::DeleteVar(const std::string& keyName) {
     int deleted = 0;
 
-    dataList::iterator itor = m_data.begin();
+    auto itor = m_data.begin();
     while (itor != m_data.end()) {
         if (itor->first == keyName) {
             // Match!
             delete (itor->second);
-            dataList::iterator itorTemp = itor;
+            auto itorTemp = itor;
             itor++;
 
             m_data.erase(itorTemp);
@@ -53,16 +53,18 @@ int VariantDB::DeleteVar(std::string keyName) {
 
         itor++;
     }
+
     return deleted;
 }
 
 Variant* VariantDB::GetVarIfExists(const std::string &keyName) {
-    dataList::iterator itor = m_data.find(keyName);
+    auto itor = m_data.find(keyName);
     if (itor != m_data.end()) {
         // Bingo!
         return &((*itor->second));
     }
-    return NULL;
+
+    return nullptr;
 }
 
 Variant* VariantDB::GetVarWithDefault(const std::string &keyName, const Variant &vDefault) {
@@ -72,6 +74,7 @@ Variant* VariantDB::GetVarWithDefault(const std::string &keyName, const Variant 
         pData = new Variant(vDefault);
         m_data[keyName] = pData;
     }
+
     return pData;
 }
 
@@ -82,16 +85,18 @@ Variant* VariantDB::GetVar(const std::string &keyName) {
         pData = new Variant;
         m_data[keyName] = pData;
     }
+
     return pData;
 }
 
 FunctionObject * VariantDB::GetFunctionIfExists(const std::string &keyName) {
-    functionList::iterator itor = m_functionData.find(keyName);
+    auto itor = m_functionData.find(keyName);
     if (itor != m_functionData.end()) {
         // Bingo!
         return &( (*itor->second));
     }
-    return NULL; // Doesn't exist
+
+    return nullptr; // Doesn't exist
 }
 
 FunctionObject* VariantDB::GetFunction(const std::string &keyName) {
@@ -101,6 +106,7 @@ FunctionObject* VariantDB::GetFunction(const std::string &keyName) {
         pData = new FunctionObject;
         m_functionData[keyName] = pData;
     }
+
     return pData;
 }
 
@@ -125,23 +131,25 @@ void VariantDB::Print() {
     // Unused
 }
 
-int VariantDB::DeleteVarsStartingWith(std::string deleteStr) {
+int VariantDB::DeleteVarsStartingWith(const std::string& deleteStr) {
     int deleted = 0;
 
-    dataList::iterator itor = m_data.begin();
+    auto itor = m_data.begin();
     while (itor != m_data.end()) {
         if (itor->first.compare(0, deleteStr.size(), deleteStr) == 0) {
             // Match!
             delete (itor->second);
-            dataList::iterator itorTemp = itor;
+            auto itorTemp = itor;
             itor++;
 
             m_data.erase(itorTemp);
             deleted++;
             continue;
         }
+
         itor++;
     }
+
     return deleted;
 }
 
@@ -156,12 +164,12 @@ void VariantDB::ResetNext() {
 }
 
 Variant* VariantDB::GetNext(std::string &keyOut) {
-    Variant *pReturn = NULL;
+    Variant *pReturn = nullptr;
 
     if (m_nextItor == m_data.end()) {
         // All done
         ResetNext();
-        return NULL;
+        return nullptr;
     }
 
     keyOut = m_nextItor->first;
@@ -170,17 +178,18 @@ Variant* VariantDB::GetNext(std::string &keyOut) {
     return pReturn;
 }
 
-bool StringFromStartMatches(const std::string &line, const std::string textToMatch) {
+bool StringFromStartMatches(const std::string &line, const std::string &textToMatch) {
     for (uint32_t i=0; i < textToMatch.size(); i++) {
         if (i >= line.length()) return false;
         if (line[i] != textToMatch[i]) return false;
     }
+
     return true;
 }
 
-int VariantDB::AddVarPointersToVector(std::vector<std::pair<const std::string*, Variant*>>* varListOut, const std::string keyMustStartWithThisText) {
+int VariantDB::AddVarPointersToVector(std::vector<std::pair<const std::string *, Variant *>> *varListOut, std::string keyMustStartWithThisText) {
     int count = 0;
-    dataList::iterator itor = m_data.begin();
+    auto itor = m_data.begin();
 
     while (itor != m_data.end()) {
         // Variant *pV = itor->second;
@@ -191,6 +200,7 @@ int VariantDB::AddVarPointersToVector(std::vector<std::pair<const std::string*, 
 
         itor++;
     }
+
     return count;
 }
 
