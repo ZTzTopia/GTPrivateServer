@@ -13,18 +13,8 @@ std::function<void (Variant *)> *Variant::GetSigOnChanged() {
     if (!m_pSig_onChanged) {
         m_pSig_onChanged = new std::function<void (Variant*)>;
     }
+
     return m_pSig_onChanged;
-}
-
-void Variant::ClearConnections() {
-    if (m_pSig_onChanged) {
-        delete m_pSig_onChanged;
-        m_pSig_onChanged = nullptr;
-    }
-}
-
-void Variant::SetVariant(Variant *pVar) { // Needed this because boost was confused...
-    Set(*pVar);
 }
 
 void Variant::Set(const Variant &v) {
@@ -61,7 +51,95 @@ void Variant::Set(const Variant &v) {
             assert(!"Add support for this var type?");
     }
 
-    if (m_pSig_onChanged) (*m_pSig_onChanged)(this);
+    if (m_pSig_onChanged) {
+        (*m_pSig_onChanged)(this);
+    }
+}
+
+void Variant::SetVariant(Variant *pVar) { // Needed this because boost was confused...
+    Set(*pVar);
+}
+
+// Helper to turn anything into a string, like ints/floats
+template<class C>
+std::string toString(C value) {
+    std::ostringstream o;
+    o << value;
+    return o.str();
+}
+
+std::string PrintVector2(CL_Vec2f v) {
+    char st[128];
+    sprintf(st, "%.2f, %.2f", v.x, v.y);
+    return std::string{ st };
+}
+
+std::string PrintVector3(CL_Vec3f v) {
+    char st[128];
+    sprintf(st, "%.3f, %.3f, %.3f", v.x, v.y, v.z);
+    return std::string{ st };
+}
+
+std::string PrintRect(CL_Rectf v) {
+    char st[128];
+    sprintf(st, "%.3f, %.3f, %.3f, %.3f", v.x, v.width, v.y, v.height);
+    return std::string{ st };
+}
+
+std::string Variant::Print() {
+    switch(GetType()) {
+        case TYPE_FLOAT:
+            return toString(GetFloat());
+        case TYPE_STRING:
+            return GetString();
+        case TYPE_VECTOR2:
+            return PrintVector2(GetVector2());
+        case TYPE_VECTOR3:
+            return PrintVector3(GetVector3());
+        case TYPE_UINT32:
+            return toString(GetUINT32());
+        case TYPE_INT32:
+            return toString(GetINT32());
+        /*case TYPE_ENTITY:
+            // return GetEntity()->GetName();
+            return "An entity"; // I don't want to include the entity.h here right now
+            break;
+        case TYPE_COMPONENT:
+            // return GetEntity()->GetName();
+            return "A component"; // I don't want to include the entity.h here right now
+            break;*/
+        case TYPE_RECT:
+            return PrintRect(GetRect());
+        case TYPE_UNUSED:
+            return "Unknown";
+        default:
+            assert(!"Add support for this var type?");
+            return "";
+    }
+}
+
+Variant &Variant::operator=(const Variant &rhs) {
+    if (this != &rhs) {
+        m_type = rhs.m_type;
+        m_pVoid = rhs.m_pVoid;
+        memcpy(m_var, rhs.m_var, C_VAR_SPACE_BYTES);
+        m_string = rhs.m_string;
+
+        if (m_pSig_onChanged) {
+            // If anyone was connected to us, let them know the valid change.  Up to them to figure out that
+            // The type might have as well!
+            if (m_pSig_onChanged) {
+                (*m_pSig_onChanged)(this);
+            }
+        }
+    }
+
+    return *this;
+}
+
+inline Variant operator+(Variant lhs, const Variant &rhs) {
+    lhs += rhs;
+    return lhs;
 }
 
 Variant &Variant::operator+=(const Variant &rhs) {
@@ -91,6 +169,11 @@ Variant &Variant::operator+=(const Variant &rhs) {
     }
 
     return *this;
+}
+
+inline Variant operator-(Variant lhs, const Variant &rhs) {
+    lhs -= rhs;
+    return lhs;
 }
 
 Variant &Variant::operator-=(const Variant &rhs) {
@@ -155,64 +238,6 @@ bool Variant::operator!=(const Variant &rhs) const {
     return !operator==(rhs);
 }
 
-// Helper to turn anything into a string, like ints/floats
-template<class C>
-std::string toString(C value) {
-    std::ostringstream o;
-    o << value;
-    return o.str();
-}
-
-std::string PrintVector2(CL_Vec2f v) {
-    char st[128];
-    sprintf(st, "%.2f, %.2f", v.x, v.y);
-    return std::string(st);
-}
-
-std::string PrintVector3(CL_Vec3f v) {
-    char st[128];
-    sprintf(st, "%.3f, %.3f, %.3f", v.x, v.y, v.z);
-    return std::string(st);
-}
-
-std::string PrintRect(CL_Rectf v) {
-    char st[128];
-    sprintf(st, "%.3f, %.3f, %.3f, %.3f", v.x, v.width, v.y, v.height);
-    return std::string(st);
-}
-
-std::string Variant::Print() {
-    switch(GetType()) {
-        case TYPE_FLOAT:
-            return toString(GetFloat());
-        case TYPE_STRING:
-            return GetString();
-        case TYPE_VECTOR2:
-            return PrintVector2(GetVector2());
-        case TYPE_VECTOR3:
-            return PrintVector3(GetVector3());
-        case TYPE_UINT32:
-            return toString(GetUINT32());
-        case TYPE_INT32:
-            return toString(GetINT32());
-        /*case TYPE_ENTITY:
-            // return GetEntity()->GetName();
-            return "An entity"; // I don't want to include the entity.h here right now
-            break;
-        case TYPE_COMPONENT:
-            // return GetEntity()->GetName();
-            return "A component"; // I don't want to include the entity.h here right now
-            break;*/
-        case TYPE_RECT:
-            return PrintRect(GetRect());
-        case TYPE_UNUSED:
-            return "Unknown";
-        default:
-            assert(!"Add support for this var type?");
-            return "";
-    }
-}
-
 #define GET_RED(p)              (((p) & 0x0000FF00) >>  8)
 #define GET_GREEN(p)            (((p) & 0x00FF0000) >> 16)
 #define GET_BLUE(p)             (((p) & 0x000000FF) << 16)
@@ -239,120 +264,114 @@ uint32_t ColorCombineMix(uint32_t c1, uint32_t c2, float progress) {
 #define EASE_FROM(x) ((x)*(x))
 
 // curPos is between 0 (value of A) and 1 (value of B)
-void Variant::Interpolate(Variant* pA, Variant* pB, float curPos, eInterpolateType type) {
+void Variant::Interpolate(Variant *pA, Variant *pB, float curPos, eInterpolateType type) {
 	assert(GetType() == pA->GetType() && GetType() == pB->GetType() && "these should all be of the same type");
 	bool bAsColor = false;
-	switch (type)
-	{
-	case INTERPOLATE_LINEAR_AS_COLOR:
-		bAsColor = true;
-		break; // As is
-	case INTERPOLATE_SMOOTHSTEP:
-		curPos = SMOOTHSTEP(curPos);
-		break;
-	case INTERPOLATE_SMOOTHSTEP_AS_COLOR:
-		curPos = SMOOTHSTEP(curPos);
-		bAsColor = true;
-		break;
-	case INTERPOLATE_EASE_TO:
-		curPos = EASE_TO(curPos);
-		break;
-	case INTERPOLATE_EASE_FROM:
-		curPos = EASE_FROM(curPos);
-		break;
-	case INTERPOLATE_EASE_TO_QUARTIC:
-		curPos = 1 - (curPos = 1 - curPos) * curPos * curPos * curPos;
-		break;
-	case INTERPOLATE_EASE_FROM_QUARTIC:
-		curPos = curPos * curPos * curPos * curPos;
-		break;
-	case INTERPOLATE_BOUNCE_TO:
-		if (curPos < 0.36363636f) {
-			curPos = 7.5625f * curPos * curPos;
-		}
-		else if (curPos < 0.72727273f) {
-			curPos = 7.5625f * (curPos -= 0.54545455f) * curPos + 0.75f;
-		}
-		else if (curPos < 0.90909091f) {
-			curPos = 7.5625f * (curPos -= 0.81818182f) * curPos + 0.9375f;
-		}
-		else {
-			curPos = 7.5625f * (curPos -= 0.95454545f) * curPos + 0.984375f;
-		}
-		break;
-	case INTERPOLATE_LINEAR:
-		break; // As is
-	default:
-		// LogError("Unknown interpolation type");
-		assert(0);
-	}
+	switch (type) {
+        case INTERPOLATE_LINEAR_AS_COLOR:
+            bAsColor = true;
+            break; // As is
+        case INTERPOLATE_SMOOTHSTEP:
+            curPos = SMOOTHSTEP(curPos);
+            break;
+        case INTERPOLATE_SMOOTHSTEP_AS_COLOR:
+            curPos = SMOOTHSTEP(curPos);
+            bAsColor = true;
+            break;
+        case INTERPOLATE_EASE_TO:
+            curPos = EASE_TO(curPos);
+            break;
+        case INTERPOLATE_EASE_FROM:
+            curPos = EASE_FROM(curPos);
+            break;
+        case INTERPOLATE_EASE_TO_QUARTIC:
+            curPos = 1 - (curPos = 1 - curPos) * curPos * curPos * curPos;
+            break;
+        case INTERPOLATE_EASE_FROM_QUARTIC:
+            curPos = curPos * curPos * curPos * curPos;
+            break;
+        case INTERPOLATE_BOUNCE_TO:
+            if (curPos < 0.36363636f) {
+                curPos = 7.5625f * curPos * curPos;
+            }
+            else if (curPos < 0.72727273f) {
+                curPos = 7.5625f * (curPos -= 0.54545455f) * curPos + 0.75f;
+            }
+            else if (curPos < 0.90909091f) {
+                curPos = 7.5625f * (curPos -= 0.81818182f) * curPos + 0.9375f;
+            }
+            else {
+                curPos = 7.5625f * (curPos -= 0.95454545f) * curPos + 0.984375f;
+            }
+            break;
+        case INTERPOLATE_LINEAR:
+            break; // As is
+        default:
+            // LogError("Unknown interpolation type");
+            assert(0);
+        }
 
-	switch (pA->GetType())
-	{
-	case Variant::TYPE_FLOAT: {
-		Set(pA->GetFloat() + ((pB->GetFloat() - pA->GetFloat()) * curPos));
-	}
-	break;
-	case Variant::TYPE_VECTOR2: {
-		Set(pA->GetVector2() + ((pB->GetVector2() - pA->GetVector2()) * curPos));
-	}
-	break;
-	case Variant::TYPE_UINT32: {
-		if (bAsColor) {
+        switch (pA->GetType())
+        {
+        case eVariantType::TYPE_FLOAT: {
+            Set(pA->GetFloat() + ((pB->GetFloat() - pA->GetFloat()) * curPos));
+        }
+        break;
+        case eVariantType::TYPE_VECTOR2: {
+            Set(pA->GetVector2() + ((pB->GetVector2() - pA->GetVector2()) * curPos));
+        }
+        break;
+        case eVariantType::TYPE_UINT32: {
+            if (bAsColor) {
 #ifdef _CONSOLE
-			assert(!"Not supported in console builds");
-			pA->Set(pB->GetUINT32());
+                assert(!"Not supported in console builds");
+                pA->Set(pB->GetUINT32());
 #else
-			Set(ColorCombineMix(pA->GetUINT32(), pB->GetUINT32(), curPos));
+                Set(ColorCombineMix(pA->GetUINT32(), pB->GetUINT32(), curPos));
 #endif
-		}
-		else {
-			Set(uint32_t(float(pA->GetUINT32()) + ((float(pB->GetUINT32()) - float(pA->GetUINT32())) * curPos)));
-		}
-	}
-	break;
-	case Variant::TYPE_INT32: {
-		Set(int32_t(float(pA->GetINT32()) + ((float(pB->GetINT32()) - float(pA->GetINT32())) * curPos)));
-	}
-	break;
-	default:
-		// LogError("Interpolate: Don't handle this combination yet");
-		assert(0);
+            }
+            else {
+                Set(uint32_t(float(pA->GetUINT32()) + ((float(pB->GetUINT32()) - float(pA->GetUINT32())) * curPos)));
+            }
+        }
+        break;
+        case eVariantType::TYPE_INT32: {
+            Set(int32_t(float(pA->GetINT32()) + ((float(pB->GetINT32()) - float(pA->GetINT32())) * curPos)));
+        }
+        break;
+        default:
+            // LogError("Interpolate: Don't handle this combination yet");
+            assert(0);
 	}
 }
 
-bool Variant::Save(FILE* fp, const std::string& varName) {
+bool Variant::Save(FILE *fp, const std::string &varName) {
     // Unused
     return false;
 }
 
-inline Variant operator+(Variant lhs, const Variant& rhs) {
-    lhs += rhs;
-    return lhs;
+void Variant::ClearConnections() {
+    if (m_pSig_onChanged) {
+        delete m_pSig_onChanged;
+        m_pSig_onChanged = nullptr;
+    }
 }
 
-inline Variant operator-(Variant lhs, const Variant& rhs) {
-    lhs -= rhs;
-    return lhs;
-}
-
-int GetSizeOfData(Variant::eType type)
-{
-    switch (type)
-    {
-    case Variant::TYPE_UNUSED:
-    case Variant::TYPE_COMPONENT:
-    case Variant::TYPE_ENTITY:
+int GetSizeOfData(eVariantType type) {
+    switch (type) {
+    case eVariantType::TYPE_UNUSED:
+    /*case eVariantType::TYPE_COMPONENT:
+    case eVariantType::TYPE_ENTITY:*/
         return 0;
-    case Variant::TYPE_UINT32:
-    case Variant::TYPE_INT32:
-    case Variant::TYPE_FLOAT:
+    case eVariantType::TYPE_UINT32:
+    case eVariantType::TYPE_INT32:
+    case eVariantType::TYPE_FLOAT:
         return 4;
-    case Variant::TYPE_VECTOR2:
+    case eVariantType::TYPE_VECTOR2:
         return sizeof(CL_Vec2f);
-    case Variant::TYPE_VECTOR3:
+    case eVariantType::TYPE_VECTOR3:
         return sizeof(CL_Vec3f);
-    case Variant::TYPE_RECT:
+    case eVariantType::TYPE_RECT:
         return sizeof(CL_Rectf);
     default:
         assert(!"Uh..");
@@ -363,8 +382,8 @@ int GetSizeOfData(Variant::eType type)
 uint8_t *VariantList::SerializeToMem(uint32_t *pSizeOut, uint8_t *pDest) {
     int varsUsed = 0, memNeeded = 0, tempSize = 0;
     for (auto &i : m_variant) {
-        if (i.GetType() == Variant::TYPE_STRING) {
-            tempSize = (int)i.GetString().size() + 4; //the 4 is for an int showing how long the string will be when writing
+        if (i.GetType() == eVariantType::TYPE_STRING) {
+            tempSize = (int)i.GetString().size() + 4; // The 4 is for an int showing how long the string will be when writing
         }
         else {
             tempSize = GetSizeOfData(i.GetType());
@@ -382,17 +401,17 @@ uint8_t *VariantList::SerializeToMem(uint32_t *pSizeOut, uint8_t *pDest) {
     }
 
     // Write it
-    uint8_t* pCur = pDest;
+    uint8_t *pCur = pDest;
     pCur[0] = uint8_t(varsUsed);
     pCur++;
 
     uint8_t type;
     for (uint8_t i = 0; i < C_MAX_VARIANT_LIST_PARMS; i++) {
-        if (m_variant[i].GetType() == Variant::TYPE_STRING) {
+        if (m_variant[i].GetType() == eVariantType::TYPE_STRING) {
             type = i;
             memcpy(pCur, &type, 1); pCur += 1; // Index
 
-            type = Variant::TYPE_STRING;
+            type = eVariantType::TYPE_STRING;
             memcpy(pCur, &type, 1); pCur += 1; // Type
 
             uint32_t s = (int)m_variant[i].GetString().size();
@@ -417,8 +436,8 @@ uint8_t *VariantList::SerializeToMem(uint32_t *pSizeOut, uint8_t *pDest) {
     return pDest;
 }
 
-bool VariantList::SerializeFromMem(uint8_t* pSrc, int bufferSize, int* pBytesReadOut) {
-    uint8_t* pStartPos = pSrc;
+bool VariantList::SerializeFromMem(uint8_t *pSrc, int bufferSize, int *pBytesReadOut) {
+    uint8_t *pStartPos = pSrc;
     uint8_t count = pSrc[0];
     pSrc++;
     for (int i = 0; i < count; i++) {
@@ -427,10 +446,9 @@ bool VariantList::SerializeFromMem(uint8_t* pSrc, int bufferSize, int* pBytesRea
         uint8_t type = pSrc[0];
         pSrc++;
         switch (type) {
-            case Variant::TYPE_STRING: {
+            case eVariantType::TYPE_STRING: {
                 uint32_t strLen;
                 memcpy(&strLen, pSrc, 4);
-
                 pSrc += 4;
 
                 std::string v;
@@ -440,35 +458,35 @@ bool VariantList::SerializeFromMem(uint8_t* pSrc, int bufferSize, int* pBytesRea
                 m_variant[index].Set(v);
                 break;
             }
-            case Variant::TYPE_UINT32: {
+            case eVariantType::TYPE_UINT32: {
                 uint32_t v;
                 memcpy(&v, pSrc, sizeof(uint32_t));
                 pSrc += sizeof(uint32_t);
                 m_variant[index].Set(v);
                 break;
             }
-            case Variant::TYPE_INT32: {
+            case eVariantType::TYPE_INT32: {
                 int32_t v;
                 memcpy(&v, pSrc, sizeof(int32_t));
                 pSrc += sizeof(int32_t);
                 m_variant[index].Set(v);
                 break;
             }
-            case Variant::TYPE_VECTOR2: {
+            case eVariantType::TYPE_VECTOR2: {
                 CL_Vec2f v;
                 memcpy(&v, pSrc, sizeof(CL_Vec2f));
                 pSrc += sizeof(CL_Vec2f);
                 m_variant[index].Set(v);
                 break;
             }
-            case Variant::TYPE_VECTOR3: {
+            case eVariantType::TYPE_VECTOR3: {
                 CL_Vec3f v;
                 memcpy(&v, pSrc, sizeof(CL_Vec3f));
                 pSrc += sizeof(CL_Vec3f);
                 m_variant[index].Set(v);
                 break;
             }
-            case Variant::TYPE_FLOAT: {
+            case eVariantType::TYPE_FLOAT: {
                 float v;
                 memcpy(&v, pSrc, sizeof(float));
                 pSrc += sizeof(float);
@@ -477,7 +495,6 @@ bool VariantList::SerializeFromMem(uint8_t* pSrc, int bufferSize, int* pBytesRea
             }
             default: {
                 // LogMsg("unknown var type");
-
                 if (pBytesReadOut) {
                     *pBytesReadOut = 0;
                 }
@@ -495,7 +512,7 @@ bool VariantList::SerializeFromMem(uint8_t* pSrc, int bufferSize, int* pBytesRea
     return true; // Success
 }
 
-void VariantList::GetVariantListStartingAt(VariantList* pOut, int startIndex) {
+void VariantList::GetVariantListStartingAt(VariantList *pOut, int startIndex) {
     int cur = 0;
     for (int i = startIndex; i < C_MAX_VARIANT_LIST_PARMS; i++) {
         pOut->m_variant[cur++] = m_variant[i];
@@ -503,19 +520,23 @@ void VariantList::GetVariantListStartingAt(VariantList* pOut, int startIndex) {
 }
 
 std::string VariantList::GetContentsAsDebugString() {
-    std::string s;
+    std::string string{};
     for (int i = 0; i < C_MAX_VARIANT_LIST_PARMS; i++) {
-        if (m_variant[i].GetType() == Variant::TYPE_UNUSED) {
+        if (m_variant[i].GetType() == eVariantType::TYPE_UNUSED) {
             break;
         }
         else {
-            if (!s.empty()) s += ", \r\n";
-            s += "Parm " + std::to_string(i) + ": " + m_variant[i].Print();
+            if (!string.empty()) {
+                string += ", \r\n";
+            }
+
+            string += "Parm " + std::to_string(i) + ": " + m_variant[i].Print();
         }
     }
 
-    if (s.empty()) {
-        s = "(None)";
+    if (string.empty()) {
+        string = "(None)";
     }
-    return s;
+
+    return string;
 }

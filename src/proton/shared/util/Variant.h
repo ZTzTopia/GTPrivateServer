@@ -16,6 +16,19 @@
 
 #include "../common.h"
 
+enum eVariantType {
+    TYPE_UNUSED,
+    TYPE_FLOAT,
+    TYPE_STRING,
+    TYPE_VECTOR2,
+    TYPE_VECTOR3,
+    TYPE_UINT32,
+    /*TYPE_ENTITY,
+    TYPE_COMPONENT,*/
+    TYPE_RECT,
+    TYPE_INT32
+};
+
 enum eInterpolateType {
     INTERPOLATE_LINEAR = 0,
     INTERPOLATE_SMOOTHSTEP,
@@ -34,19 +47,6 @@ enum eInterpolateType {
 class Variant {
     friend class VariantList;
 public:
-    enum eType {
-        TYPE_UNUSED,
-        TYPE_FLOAT,
-        TYPE_STRING,
-        TYPE_VECTOR2,
-        TYPE_VECTOR3,
-        TYPE_UINT32,
-        TYPE_ENTITY,
-        TYPE_COMPONENT,
-        TYPE_RECT,
-        TYPE_INT32
-    };
-
     Variant() { SetDefaults(); }
     ~Variant();
 
@@ -56,7 +56,7 @@ public:
     Variant(float x, float y) { SetDefaults(); Set(CL_Vec2f(x, y)); }
     Variant(float x, float y, float z) { SetDefaults(); Set(CL_Vec3f(x, y, z)); }
     Variant(float x, float y, float w, float z) { SetDefaults(); Set(CL_Rectf(x, y, w, z)); }
-    Variant(const char *var) { SetDefaults(); Set(std::string(var)); }
+    Variant(const char *var) { SetDefaults(); Set(std::string{ var }); }
     Variant(const std::string &var) { SetDefaults(); Set(var); }
     Variant(const CL_Vec2f &v2) { SetDefaults(); Set(v2); }
     Variant(const CL_Vec3f &v3) { SetDefaults(); Set(v3); }
@@ -82,6 +82,56 @@ public:
     void Set(const Variant &v);
     void SetVariant(Variant *pVar) /* Needed this because boost was confused... */;
 
+    void Set(uint32_t var) {
+        assert(m_type == TYPE_UNUSED || m_type == TYPE_UINT32);
+
+        m_type = TYPE_UINT32;
+        *((uint32_t*)m_var) = var;
+
+        if (m_pSig_onChanged) {
+            (*m_pSig_onChanged)(this);
+        }
+    }
+
+    uint32_t &GetUINT32() {
+        if (m_type == TYPE_UNUSED) {
+            Set(uint32_t(0));
+        }
+
+        assert(m_type == TYPE_UINT32);
+        return *((uint32_t*)m_var);
+    }
+
+    [[nodiscard]] const uint32_t &GetUINT32() const {
+        assert(m_type == TYPE_UINT32);
+        return *((uint32_t*)m_var);
+    }
+
+    void Set(int32_t var) {
+        assert(m_type == TYPE_UNUSED || m_type == TYPE_INT32);
+
+        m_type = TYPE_INT32;
+        *((int32_t*)m_var) = var;
+
+        if (m_pSig_onChanged) {
+            (*m_pSig_onChanged)(this);
+        }
+    }
+
+    int32_t &GetINT32() {
+        if (m_type == TYPE_UNUSED) {
+            Set(int32_t(0));
+        }
+
+        assert(m_type == TYPE_INT32);
+        return *((int32_t*)m_var);
+    }
+
+    [[nodiscard]] const int32_t &GetINT32() const {
+        assert(m_type == TYPE_INT32);
+        return *((int32_t*)m_var);
+    }
+
     void Set(float var) {
         assert(m_type == TYPE_UNUSED || m_type == TYPE_FLOAT);
 
@@ -105,6 +155,125 @@ public:
     [[nodiscard]] const float &GetFloat() const {
         assert(m_type == TYPE_FLOAT);
         return *((float*)m_var);
+    }
+
+    void Set(const char *var) {
+        Set(std::string{ var });
+    }
+
+    void Set(std::string const &var) {
+        assert(m_type == TYPE_UNUSED || m_type == TYPE_STRING);
+
+        m_type = TYPE_STRING;
+        m_string = var;
+
+        if (m_pSig_onChanged) {
+            (*m_pSig_onChanged)(this);
+        }
+    }
+
+    std::string &GetString() {
+        if (m_type == TYPE_UNUSED) {
+            Set("");
+        }
+
+        assert(m_type == TYPE_STRING);
+        return m_string;
+    }
+
+    [[nodiscard]] const std::string &GetString() const {
+        assert(m_type == TYPE_STRING);
+        return m_string;
+    }
+
+    void Set(CL_Vec2f const &var) {
+        assert(m_type == TYPE_UNUSED || m_type == TYPE_VECTOR2);
+
+        m_type = TYPE_VECTOR2;
+        *((CL_Vec2f*)m_var) = var;
+
+        if (m_pSig_onChanged) {
+            (*m_pSig_onChanged)(this);
+        }
+    }
+
+    CL_Vec2f &GetVector2() {
+        if (m_type == TYPE_UNUSED) {
+            // Set a default
+            Set(CL_Vec2f(0,0));
+        }
+
+        assert(m_type == TYPE_VECTOR2);
+        return *((CL_Vec2f*)m_var);
+    }
+
+    [[nodiscard]] const CL_Vec2f &GetVector2() const {
+        assert(m_type == TYPE_VECTOR2);
+        return *((CL_Vec2f*)m_var);
+    }
+
+    void Set(float x, float y) {
+        Set(CL_Vec2f(x,y));
+    }
+
+    void Set(CL_Vec3f const &var) {
+        assert(m_type == TYPE_UNUSED || m_type == TYPE_VECTOR3);
+
+        m_type = TYPE_VECTOR3;
+        *((CL_Vec3f*)m_var) = var;
+
+        if (m_pSig_onChanged) {
+            (*m_pSig_onChanged)(this);
+        }
+    }
+
+    CL_Vec3f &GetVector3() {
+        if (m_type == TYPE_UNUSED) {
+            // Set a default
+            Set(CL_Vec3f(0,0,0));
+        }
+
+        assert(m_type == TYPE_VECTOR3);
+        return *((CL_Vec3f*)m_var);
+    }
+
+    [[nodiscard]] const CL_Vec3f &GetVector3() const {
+        assert(m_type == TYPE_VECTOR3);
+        return *((CL_Vec3f*)m_var);
+    }
+
+    void Set(float x, float y, float z) {
+        Set(CL_Vec3f(x,y,z));
+    }
+
+    void Set(CL_Rectf const &var) {
+        assert(m_type == TYPE_UNUSED || m_type == TYPE_RECT);
+
+        m_type = TYPE_RECT;
+        *((CL_Rectf*)m_var) = var;
+
+        if (m_pSig_onChanged) {
+            (*m_pSig_onChanged)(this);
+        }
+    }
+
+    CL_Rectf &GetRect() {
+        if (m_type == TYPE_UNUSED) {
+            // Set a default
+            Set(CL_Rectf(0,0,0,0));
+        }
+
+        assert(m_type == TYPE_RECT);
+        return *((CL_Rectf*)m_var);
+    }
+
+    [[nodiscard]] const CL_Rectf &GetRect() const {
+        assert(m_type == TYPE_RECT);
+        return *((CL_Rectf*)m_var);
+    }
+
+    void Set(float x, float y, float w, float z) {
+        Set(CL_Rectf(x, y, w, z));
     }
 
     /*void Set(const Entity *pEnt) {
@@ -141,186 +310,10 @@ public:
         return  ((EntityComponent*)m_pVoid);
     }*/
 
-    void Set(uint32_t var) {
-        assert(m_type == TYPE_UNUSED || m_type == TYPE_UINT32);
-
-        m_type = TYPE_UINT32;
-        *((uint32_t*)m_var) = var;
-
-        if (m_pSig_onChanged) {
-            (*m_pSig_onChanged)(this);
-        }
-    }
-
-    uint32_t &GetUINT32() {
-        if (m_type == TYPE_UNUSED) {
-            Set(uint32_t(0));
-        }
-
-        assert(m_type == TYPE_UINT32);
-        return *((uint32_t*)m_var);
-    }
-
-    [[nodiscard]] const uint32_t &GetUINT32() const {
-        assert(m_type == TYPE_UINT32);
-        return *((uint32_t*)m_var);
-    }
-
-    void Set(int32_t var) {
-        assert(m_type == TYPE_UNUSED || m_type == TYPE_INT32);
-
-        m_type = TYPE_INT32;
-        *((int32_t*)m_var) = var;
-        if (m_pSig_onChanged) {
-            (*m_pSig_onChanged)(this);
-        }
-    }
-
-    int32_t &GetINT32() {
-        if (m_type == TYPE_UNUSED) {
-            Set(int32_t(0));
-        }
-
-        assert(m_type == TYPE_INT32);
-        return *((int32_t*)m_var);
-    }
-
-    [[nodiscard]] const int32_t &GetINT32() const {
-        assert(m_type == TYPE_INT32);
-        return *((int32_t*)m_var);
-    }
-
-    void Set(const char *var) {
-        Set(std::string(var));
-    }
-
-    void Set(std::string const &var) {
-        assert(m_type == TYPE_UNUSED || m_type == TYPE_STRING);
-
-        m_type = TYPE_STRING;
-        m_string = var;
-
-        if (m_pSig_onChanged) {
-            (*m_pSig_onChanged)(this);
-        }
-    }
-
-    std::string &GetString() {
-        if (m_type == TYPE_UNUSED) {
-            Set("");
-        }
-
-        assert(m_type != TYPE_STRING);
-        return m_string;
-    }
-
-    [[nodiscard]] const std::string &GetString() const {
-        assert(m_type != TYPE_STRING);
-        return m_string;
-    }
-
-    void Set(CL_Vec2f const &var) {
-        assert(m_type == TYPE_UNUSED || m_type == TYPE_VECTOR2);
-
-        m_type = TYPE_VECTOR2;
-        *((CL_Vec2f*)m_var) = var;
-
-        if (m_pSig_onChanged) {
-            (*m_pSig_onChanged)(this);
-        }
-    }
-
-    CL_Vec2f &GetVector2() {
-        if (m_type == TYPE_UNUSED) {
-            // Set a default
-            Set(CL_Vec2f(0,0));
-        }
-
-        return *((CL_Vec2f*)m_var);
-    }
-
-    [[nodiscard]] const CL_Vec2f &GetVector2() const {
-        assert(m_type == TYPE_VECTOR2);
-        return *((CL_Vec2f*)m_var);
-    }
-
-    void Set(float x, float y) {
-        Set(CL_Vec2f(x,y));
-    }
-
-    void Set(CL_Vec3f const &var) {
-        assert(m_type == TYPE_UNUSED || m_type == TYPE_VECTOR3);
-
-        m_type = TYPE_VECTOR3;
-        *((CL_Vec3f*)m_var) = var;
-
-        if (m_pSig_onChanged) {
-            (*m_pSig_onChanged)(this);
-        }
-    }
-
-    CL_Vec3f &GetVector3() {
-        if (m_type == TYPE_UNUSED) {
-            // Set a default
-            Set(CL_Vec3f(0,0,0));
-        }
-
-        return *((CL_Vec3f*)m_var);
-    }
-
-    [[nodiscard]] const CL_Vec3f &GetVector3() const {
-        assert(m_type == TYPE_VECTOR3);
-        return *((CL_Vec3f*)m_var);
-    }
-
-    void Set(CL_Rectf const &var) {
-        assert(m_type == TYPE_UNUSED || m_type == TYPE_RECT);
-
-        m_type = TYPE_RECT;
-        *((CL_Rectf*)m_var) = var;
-
-        if (m_pSig_onChanged) {
-            (*m_pSig_onChanged)(this);
-        }
-    }
-
-    CL_Rectf &GetRect() {
-        if (m_type == TYPE_UNUSED) {
-            // Set a default
-            Set(CL_Rectf(0,0,0,0));
-        }
-
-        return *((CL_Rectf*)m_var);
-    }
-
-    [[nodiscard]] const CL_Rectf &GetRect() const {
-        assert(m_type == TYPE_RECT);
-        return *((CL_Rectf*)m_var);
-    }
-
-    void Set(float x, float y, float z) {
-        Set(CL_Vec3f(x,y,z));
-    }
-
-    [[nodiscard]] eType GetType() const { return m_type; }
+    [[nodiscard]] eVariantType GetType() const { return m_type; }
     std::string Print();
 
-    Variant & operator=(const Variant &rhs) {
-        m_type = rhs.m_type;
-        m_pVoid = rhs.m_pVoid;
-        memcpy(m_var, rhs.m_var, C_VAR_SPACE_BYTES);
-        m_string = rhs.m_string;
-
-        if (m_pSig_onChanged) {
-            // If anyone was connected to us, let them know the valid change.  Up to them to figure out that
-            // The type might have as well!
-            if (m_pSig_onChanged) {
-                (*m_pSig_onChanged)(this);
-            }
-        }
-
-        return *this;
-    }
+    Variant &operator=(const Variant &rhs);
 
     /**
      * Add-and-assign operator.
@@ -396,7 +389,7 @@ private:
     }
 
 private:
-    eType m_type;
+    eVariantType m_type;
     void *m_pVoid;
     union {
         uint8_t m_var[C_VAR_SPACE_BYTES]; // Large enough so we can use the space for all the datatypes we care about
@@ -415,7 +408,7 @@ private:
  * \c Variant that contains the result of the operation.
  * \see Variant::operator+=()
  */
-inline Variant operator+(Variant lhs, const Variant& rhs);
+inline Variant operator+(Variant lhs, const Variant &rhs);
 
 /**
  * \relates Variant
@@ -423,7 +416,7 @@ inline Variant operator+(Variant lhs, const Variant& rhs);
  * the result of the operation.
  * \see Variant::operator-=()
  */
-inline Variant operator-(Variant lhs, const Variant& rhs);
+inline Variant operator-(Variant lhs, const Variant &rhs);
 
 // A VariantList holds a group of variants, we pass these when we don't know in advance how many variants we want to use
 

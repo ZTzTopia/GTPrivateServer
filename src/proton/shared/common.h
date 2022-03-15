@@ -23,6 +23,14 @@ typedef struct _CL_Vec2f {
         return x == other.x && y == other.y;
     }
 
+    bool operator!=(const _CL_Vec2f& other) const {
+        return x != other.x || y != other.y;
+    }
+
+    _CL_Vec2f operator+(const _CL_Vec2f& other) const {
+        return _CL_Vec2f(x + other.x, y + other.y);
+    }
+
     _CL_Vec2f operator-(const _CL_Vec2f& other) const {
         return _CL_Vec2f(x - other.x, y - other.y);
     }
@@ -53,6 +61,14 @@ typedef struct _CL_Vec2i {
 
     bool operator==(const _CL_Vec2i& other) const {
         return x == other.x && y == other.y;
+    }
+
+    bool operator!=(const _CL_Vec2i& other) const {
+        return x != other.x || y != other.y;
+    }
+
+    _CL_Vec2i operator+(const _CL_Vec2i& other) const {
+        return _CL_Vec2i(x + other.x, y + other.y);
     }
 
     _CL_Vec2i operator-(const _CL_Vec2i& other) const {
@@ -91,6 +107,14 @@ typedef struct _CL_Vec3f {
         return x == other.x && y == other.y && z == other.z;
     }
 
+    bool operator!=(const _CL_Vec3f& other) const {
+        return x != other.x || y != other.y || z != other.z;
+    }
+
+    _CL_Vec3f operator+(const _CL_Vec3f& other) const {
+        return _CL_Vec3f(x + other.x, y + other.y, z + other.z);
+    }
+
     _CL_Vec3f operator-(const _CL_Vec3f& other) const {
         return _CL_Vec3f(x - other.x, y - other.y, z - other.z);
     }
@@ -125,6 +149,14 @@ typedef struct _CL_Vec3i {
 
     bool operator==(const _CL_Vec3i& other) const {
         return x == other.x && y == other.y && z == other.z;
+    }
+
+    bool operator!=(const _CL_Vec3i& other) const {
+        return x != other.x || y != other.y || z != other.z;
+    }
+
+    _CL_Vec3i operator+(const _CL_Vec3i& other) const {
+        return _CL_Vec3i(x + other.x, y + other.y, z + other.z);
     }
 
     _CL_Vec3i operator-(const _CL_Vec3i& other) const {
@@ -167,6 +199,14 @@ typedef struct _CL_Rectf {
         return x == other.x && y == other.y && width == other.width && height == other.height;
     }
 
+    bool operator!=(const _CL_Rectf& other) const {
+        return x != other.x || y != other.y || width != other.width || height != other.height;
+    }
+
+    _CL_Rectf operator+(const _CL_Rectf& other) const {
+        return _CL_Rectf(x + other.x, y + other.y, width + other.width, height + other.height);
+    }
+
     _CL_Rectf operator-(const _CL_Rectf& other) const {
         return _CL_Rectf(x - other.x, y - other.y, width - other.width, height - other.height);
     }
@@ -205,6 +245,14 @@ typedef struct _CL_Recti {
 
     bool operator==(const _CL_Recti& other) const {
         return x == other.x && y == other.y && width == other.width && height == other.height;
+    }
+
+    bool operator!=(const _CL_Recti& other) const {
+        return x != other.x || y != other.y || width != other.width || height != other.height;
+    }
+
+    _CL_Recti operator+(const _CL_Recti& other) const {
+        return _CL_Recti(x + other.x, y + other.y, width + other.width, height + other.height);
     }
 
     _CL_Recti operator-(const _CL_Recti& other) const {
