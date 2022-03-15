@@ -9,7 +9,7 @@ Variant::~Variant() {
     }
 }
 
-std::function<void (Variant*)>* Variant::GetSigOnChanged() {
+std::function<void (Variant *)> *Variant::GetSigOnChanged() {
     if (!m_pSig_onChanged) {
         m_pSig_onChanged = new std::function<void (Variant*)>;
     }
@@ -23,18 +23,11 @@ void Variant::ClearConnections() {
     }
 }
 
-void Variant::Set(std::string const& var) {
-    assert(m_type == TYPE_UNUSED || m_type == TYPE_STRING);
-    m_type = TYPE_STRING;
-    m_string = var;
-    if (m_pSig_onChanged) (*m_pSig_onChanged)(this);
-}
-
-void Variant::SetVariant(Variant* pVar) { // Needed this because boost was confused...
+void Variant::SetVariant(Variant *pVar) { // Needed this because boost was confused...
     Set(*pVar);
 }
 
-void Variant::Set(const Variant& v) {
+void Variant::Set(const Variant &v) {
     // Update our data from another variant object
     switch (v.GetType()) {
         case TYPE_FLOAT:
@@ -71,7 +64,7 @@ void Variant::Set(const Variant& v) {
     if (m_pSig_onChanged) (*m_pSig_onChanged)(this);
 }
 
-Variant& Variant::operator+=(const Variant& rhs) {
+Variant &Variant::operator+=(const Variant &rhs) {
     if (GetType() == rhs.GetType()) {
         switch (GetType()) {
             case TYPE_FLOAT:
@@ -100,7 +93,7 @@ Variant& Variant::operator+=(const Variant& rhs) {
     return *this;
 }
 
-Variant& Variant::operator-=(const Variant& rhs) {
+Variant &Variant::operator-=(const Variant &rhs) {
     if (GetType() == rhs.GetType()) {
         switch (GetType()) {
             case TYPE_FLOAT:
@@ -126,7 +119,7 @@ Variant& Variant::operator-=(const Variant& rhs) {
     return *this;
 }
 
-bool Variant::operator==(const Variant& rhs) const {
+bool Variant::operator==(const Variant &rhs) const {
     if (GetType() != rhs.GetType()) {
         return false;
     }
@@ -158,12 +151,12 @@ bool Variant::operator==(const Variant& rhs) const {
     }
 }
 
-bool Variant::operator!=(const Variant& rhs) const {
+bool Variant::operator!=(const Variant &rhs) const {
     return !operator==(rhs);
 }
 
 // Helper to turn anything into a string, like ints/floats
-template< class C>
+template<class C>
 std::string toString(C value) {
     std::ostringstream o;
     o << value;
@@ -192,22 +185,16 @@ std::string Variant::Print() {
     switch(GetType()) {
         case TYPE_FLOAT:
             return toString(GetFloat());
-            break;
         case TYPE_STRING:
             return GetString();
-            break;
         case TYPE_VECTOR2:
             return PrintVector2(GetVector2());
-            break;
         case TYPE_VECTOR3:
             return PrintVector3(GetVector3());
-            break;
         case TYPE_UINT32:
             return toString(GetUINT32());
-            break;
         case TYPE_INT32:
             return toString(GetINT32());
-            break;
         /*case TYPE_ENTITY:
             // return GetEntity()->GetName();
             return "An entity"; // I don't want to include the entity.h here right now
@@ -218,10 +205,8 @@ std::string Variant::Print() {
             break;*/
         case TYPE_RECT:
             return PrintRect(GetRect());
-            break;
         case TYPE_UNUSED:
             return "Unknown";
-            break;
         default:
             assert(!"Add support for this var type?");
             return "";
@@ -375,14 +360,14 @@ int GetSizeOfData(Variant::eType type)
     return 0;
 }
 
-uint8_t* VariantList::SerializeToMem(uint32_t* pSizeOut, uint8_t* pDest) {
+uint8_t *VariantList::SerializeToMem(uint32_t *pSizeOut, uint8_t *pDest) {
     int varsUsed = 0, memNeeded = 0, tempSize = 0;
-    for (int i = 0; i < C_MAX_VARIANT_LIST_PARMS; i++) {
-        if (m_variant[i].GetType() == Variant::TYPE_STRING) {
-            tempSize = (int)m_variant[i].GetString().size() + 4; //the 4 is for an int showing how long the string will be when writing
+    for (auto &i : m_variant) {
+        if (i.GetType() == Variant::TYPE_STRING) {
+            tempSize = (int)i.GetString().size() + 4; //the 4 is for an int showing how long the string will be when writing
         }
         else {
-            tempSize = GetSizeOfData(m_variant[i].GetType());
+            tempSize = GetSizeOfData(i.GetType());
         }
 
         if (tempSize > 0) {
