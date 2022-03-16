@@ -3,8 +3,14 @@
 #include <thread>
 #include <spdlog/spdlog.h>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#endif
+
 #include "enetwrapper/enetserver.h"
 #include "http/http.h"
+#include "include/backtrace-cpp/backtrace.hpp"
 #include "items/itemsdb.h"
 #include "server/serverpool.h"
 #include "server/servergateway.h"
@@ -12,6 +18,11 @@
 static std::atomic<bool> running{ true };
 
 int main() {
+#ifndef _WIN32
+    std::cout << "Other platforms not tested." << std::endl;
+    return EXIT_FAILURE;
+#endif
+
     // ==================================================================================================
     // spd log
 
@@ -19,6 +30,39 @@ int main() {
     spdlog::set_pattern("[%Y-%m-%dT%TZ] [%n] [%^%l%$] [thread %t] %v");
 
     spdlog::info("Growtopia Private Server.");
+
+    // ==================================================================================================
+    // Signal handler
+
+    const auto signal_handler{
+        [](int sig) {
+            spdlog::info("Received signal {}. Exiting.", sig);
+            running.store(false);
+
+            if (sig != SIGINT) {
+                backward::TraceResolver tr;
+                backward::StackTrace st;
+                st.load_here(32);
+                tr.load_stacktrace(st);
+                for (size_t i = 0; i < st.size(); ++i) {
+                    backward::ResolvedTrace trace = tr.resolve(st[i]);
+                    spdlog::error("#{} {} {} [{}]", i, trace.object_filename, trace.object_function, trace.addr);
+                }
+            }
+        }
+    };
+
+    std::signal(SIGILL, signal_handler);
+    std::signal(SIGFPE, signal_handler);
+    std::signal(SIGSEGV, signal_handler);
+    std::signal(SIGINT, signal_handler);
+    std::signal(SIGTERM, signal_handler);
+    std::signal(SIGBREAK, signal_handler);
+    std::signal(SIGABRT, signal_handler);
+#ifndef _WIN32
+    std::signal(SIGHUP, signal_handler);
+    std::signal(SIGBUS, signal_handler);
+#endif
 
     // ==================================================================================================
     // Exit thread
@@ -81,22 +125,6 @@ int main() {
     std::thread http{ http::HTTP::create_server_data, std::ref(running), server_gateway_port, server_gateway_count };
 
     // ==================================================================================================
-    // Signal handler
-
-    const auto signal_handler{
-        [](int sig) {
-            spdlog::info("Received signal {}. Exiting.", sig);
-            running.store(false);
-        }
-    };
-
-    std::signal(SIGINT, signal_handler);
-    std::signal(SIGTERM, signal_handler);
-#ifndef _WIN32
-    std::signal(SIGHUP, signal_handler);
-#endif
-
-    // ==================================================================================================
     // Main loop
 
     while (running.load()) {
@@ -108,6 +136,7 @@ int main() {
 
     spdlog::info("Cleaning up..");
 
+    // TODO: Move cleanup to signal handler.
     if (items::get_items_db()) {
         delete items::get_items_db();
     }
@@ -122,8 +151,6 @@ int main() {
 
     exit_thread.join();
     http.join();
-
-    getchar();
 
     return EXIT_SUCCESS;
 }

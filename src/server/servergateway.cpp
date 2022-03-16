@@ -60,7 +60,6 @@ namespace server {
                 uint8_t *data = variant_list.SerializeToMem(&data_size, nullptr);
 
                 variant_list.SerializeFromMem(data, data_size, nullptr);
-                printf("%s\n", variant_list.GetContentsAsDebugString().c_str());
 
                 player::GameUpdatePacket packet_{};
                 packet_.packet_type = player::PACKET_CALL_FUNCTION;
