@@ -25,7 +25,7 @@ enum eVariantType {
     TYPE_UINT32,
     /*TYPE_ENTITY,
     TYPE_COMPONENT,*/
-    TYPE_RECT,
+    TYPE_RECT = 8,
     TYPE_INT32
 };
 
@@ -56,7 +56,7 @@ public:
     Variant(float x, float y) { SetDefaults(); Set(CL_Vec2f(x, y)); }
     Variant(float x, float y, float z) { SetDefaults(); Set(CL_Vec3f(x, y, z)); }
     Variant(float x, float y, float w, float z) { SetDefaults(); Set(CL_Rectf(x, y, w, z)); }
-    Variant(const char *var) { SetDefaults(); Set(std::string{ var }); }
+    Variant(const char *var) { SetDefaults(); Set(var); }
     Variant(const std::string &var) { SetDefaults(); Set(var); }
     Variant(const CL_Vec2f &v2) { SetDefaults(); Set(v2); }
     Variant(const CL_Vec3f &v3) { SetDefaults(); Set(v3); }
