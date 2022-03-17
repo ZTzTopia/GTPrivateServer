@@ -83,7 +83,7 @@ namespace player {
         uint32_t net_id; // 4
         uint32_t unk5; // 8
         uint32_t flags; // 12
-        uint32_t unk7; // 16
+        float unk7; // 16
         uint32_t unk8; // 20
         float unk9; // 24
         float unk10; // 28
@@ -122,9 +122,9 @@ namespace player {
 
     inline GameUpdatePacket *get_struct(ENetPacket *packet) {
         if (packet->dataLength >= sizeof(GameUpdatePacket)) {
-            auto *game_update_packet = (GameUpdatePacket*)(packet->data + 4);
+            auto *game_update_packet = reinterpret_cast<GameUpdatePacket *>(packet->data + 4);
             if ((game_update_packet->flags & 0x8) == 0) {
-                game_update_packet->data_extended = 0;
+                // game_update_packet->data_extended = 0;
             }
             else {
                 if (packet->dataLength < game_update_packet->data_extended_size + sizeof(GameUpdatePacket)) {

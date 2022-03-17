@@ -1,13 +1,9 @@
 #include <spdlog/spdlog.h>
 
 #include "server.h"
-#include "../player/playerpool.h"
 
 namespace server {
-    Server::Server(enet_uint16 port, size_t max_peer)
-        : m_port(port)
-        , m_max_peer(max_peer)
-        , m_peer_count(0) {
+    Server::Server(enet_uint16 port, size_t max_peer) {
         if (create_host(port, max_peer) != 0) {
             spdlog::error("Server with port {} failed to start.", port);
             delete this;
@@ -15,27 +11,63 @@ namespace server {
         }
 
         start_service();
+
+        m_player_pool = new player::PlayerPool{};
+        m_world_pool = new world::WorldPool{};
+    }
+
+    void Server::on_update() {
+        for (ENetPeer *current_peer = m_host->peers; current_peer < &m_host->peers[m_host->peerCount]; ++current_peer) {
+            if (current_peer->state != ENET_PEER_STATE_CONNECTED) {
+                continue;
+            }
+
+            // From github copilot 🤣. (good is work)
+            float packet_loss = (float) current_peer->packetLoss / (float) ENET_PEER_PACKET_LOSS_SCALE;
+            float packet_loss_variance = (float) current_peer->packetLossVariance / (float) ENET_PEER_PACKET_LOSS_SCALE;
+            if (packet_loss > 0.0f && packet_loss_variance > 0.0f) {
+                if (packet_loss_variance > packet_loss) {
+                    packet_loss_variance = packet_loss;
+                }
+
+                float min = packet_loss - packet_loss_variance;
+                float max = packet_loss + packet_loss_variance;
+
+                if (min < 0.1f && max > 0.1f) {
+                    spdlog::info("Client {} kicked for packet loss.", current_peer->connectID);
+                    enet_peer_disconnect_later(current_peer, 0);
+                    return;
+                }
+            }
+        }
     }
 
     void Server::on_connect(ENetPeer *peer) {
         spdlog::info("Client connected. (id: {})", peer->connectID);
 
-        m_peer_count++;
-        m_peers.emplace_back(peer);
-
-        player::Player *player = player::get_player_pool()->new_player(peer);
+        player::Player *player = m_player_pool->new_player(peer);
         player->send_packet(player::NET_MESSAGE_SERVER_HELLO, "");
     }
 
     void Server::on_receive(ENetPeer *peer, ENetPacket *packet) {
-        player::Player *player = player::get_player_pool()->get_player(peer->connectID);
+        player::Player *player = m_player_pool->get_player(peer->connectID);
         if (!player) {
             enet_peer_disconnect_now(peer, 0);
             return;
         }
 
+        if (packet->dataLength == 5) {
+            return;
+        }
+
+        if (peer->packetsSent > 128) {
+            spdlog::info("Client {} kicked for flooding.", peer->connectID);
+            enet_peer_disconnect_later(peer, 0);
+            return;
+        }
+
         player::eNetMessageType type = player::get_message_type(packet);
-        spdlog::info("Type {}", type);
+        // spdlog::info("Type {}", type);
 
         switch (type) {
             case player::NET_MESSAGE_GENERIC_TEXT:
@@ -44,7 +76,11 @@ namespace server {
                 player->process_generic_text_or_game_message(std::string(player::get_text(packet)));
                 break;
             case player::NET_MESSAGE_GAME_PACKET:
-                spdlog::info("Packet type {}", player::get_struct(packet)->packet_type);
+                if (packet->dataLength < 5 + sizeof(player::GameUpdatePacket) - 4) {
+                    return;
+                }
+
+                // spdlog::info("Packet type {}", player::get_struct(packet)->packet_type);
                 // player->process_game_packet(player::get_struct(packet));
                 break;
             default:
@@ -54,24 +90,13 @@ namespace server {
     }
 
     void Server::on_disconnect(ENetPeer *peer) {
-        m_peer_count--;
-        m_peers.erase(std::remove(m_peers.begin(), m_peers.end(), peer), m_peers.end());
-
         if (!peer->data) {
             return;
         }
 
-        // no warning k.
-        struct wow {
-            enet_uint32 connect_id;
-        };
+        auto connect_id = reinterpret_cast<uint32_t&>(peer->data);
+        m_player_pool->remove_player(connect_id);
 
-        auto connect_id = ((wow *)peer->data)->connect_id;
-        delete (wow *)peer->data;
         spdlog::info("Client disconnected. (id: {})", connect_id);
-
-        peer->data = nullptr;
-
-        player::get_player_pool()->remove_player(connect_id);
     }
 }

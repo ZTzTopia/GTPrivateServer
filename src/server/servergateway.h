@@ -1,5 +1,6 @@
 #pragma once
 #include "../enetwrapper/enetserver.h"
+#include "../player/playerpool.h"
 
 namespace server {
     class ServerGateway : public enetwrapper::ENetServer {
@@ -12,8 +13,6 @@ namespace server {
         void on_disconnect(ENetPeer *peer) override;
 
     private:
-        enet_uint16 m_port;
-        size_t m_max_peer;
-        size_t m_peer_count;
+        player::PlayerPool *m_player_pool;
     };
 }

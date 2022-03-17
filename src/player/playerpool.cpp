@@ -26,14 +26,7 @@ namespace player {
     }
 
     void PlayerPool::remove_player(enet_uint32 connect_id) {
-        for (auto &player : m_players) {
-            if (player->get_peer()->connectID == connect_id) {
-                delete player;
-                m_players.erase(std::remove(m_players.begin(), m_players.end(), player), m_players.end());
-                m_players.shrink_to_fit();
-                break;
-            }
-        }
+        remove_player(get_player(connect_id));
     }
 
     Player *PlayerPool::get_player(enet_uint32 connect_id) {

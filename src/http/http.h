@@ -1,7 +1,11 @@
 #pragma once
 #include <string>
 #include <atomic>
+#ifdef _WIN32
 #include <WinSock2.h>
+#endif
+
+#include "../utils/random.h"
 
 namespace http {
 #ifndef _WIN32
@@ -77,7 +81,7 @@ namespace http {
                             "port|"
                         };
 
-                        http_body.append(std::to_string(server_gateway_port + (rand() % (server_gateway_count + 1))));
+                        http_body.append(std::to_string(server_gateway_port + random::get_generator_static().uniform<enet_uint16>(static_cast<uint8_t>(0), server_gateway_count - 1)));
                         http_body.append("\r\n");
                         http_body.append(
                             "type|1\r\n"

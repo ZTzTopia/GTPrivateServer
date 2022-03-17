@@ -4,6 +4,8 @@
 
 namespace enetwrapper {
     class ENetServer {
+        friend class ServerGateway;
+        friend class Server;
     public:
         ENetServer();
         ~ENetServer();
@@ -19,7 +21,7 @@ namespace enetwrapper {
         virtual void on_receive(ENetPeer *peer, ENetPacket *packet) = 0;
         virtual void on_disconnect(ENetPeer *peer) = 0;
 
-    private:
+    protected:
         ENetHost *m_host;
         std::thread m_service_thread;
         std::atomic<bool> m_running;

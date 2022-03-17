@@ -34,7 +34,7 @@
 #ifndef HAS_MSGHDR_FLAGS
 #define HAS_MSGHDR_FLAGS 1
 #endif
-#ifndef HAS_SOCKLEN_T
+#if !defined(HAS_SOCKLEN_T) && !defined(__socklen_t_defined)
 #define HAS_SOCKLEN_T 1
 #endif
 #ifndef HAS_GETADDRINFO

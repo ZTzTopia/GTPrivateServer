@@ -448,6 +448,7 @@ public:
     VariantList(const Variant &v0, const Variant &v1, const Variant &v2, const Variant &v3) { m_variant[0] = v0; m_variant[1] = v1; m_variant[2] = v2; m_variant[3] = v3; }
     VariantList(const Variant &v0, const Variant &v1, const Variant &v2, const Variant &v3, const Variant &v4) { m_variant[0] = v0; m_variant[1] = v1; m_variant[2] = v2; m_variant[3] = v3; m_variant[4] = v4; }
     VariantList(const Variant &v0, const Variant &v1, const Variant &v2, const Variant &v3, const Variant &v4, const Variant &v5) { m_variant[0] = v0; m_variant[1] = v1; m_variant[2] = v2; m_variant[3] = v3; m_variant[4] = v4;  m_variant[5] = v5; }
+    VariantList(const Variant &v0, const Variant &v1, const Variant &v2, const Variant &v3, const Variant &v4, const Variant &v5, const Variant &v6) { m_variant[0] = v0; m_variant[1] = v1; m_variant[2] = v2; m_variant[3] = v3; m_variant[4] = v4;  m_variant[5] = v5; m_variant[6] = v6; }
 
     void Reset() {
         for (auto &i : m_variant) {

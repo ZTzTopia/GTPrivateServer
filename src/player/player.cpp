@@ -5,15 +5,7 @@ namespace player {
     Player::Player(ENetPeer *peer)
         : EventTrigger()
         , m_peer(peer) {
-        // no warning k.
-        struct wow {
-            enet_uint32 connect_id;
-        };
-
-        // use this pointer???
-        wow * ww = new wow {};
-        ww->connect_id = peer->connectID;
-        peer->data = ww;
+        peer->data = reinterpret_cast<void *>(peer->connectID);
 
         EventManager::load(this);
     }
@@ -60,49 +52,61 @@ namespace player {
                 return ret;
             }
 
-            ENetPacket* packet = enet_packet_create(nullptr, length + 5, flags);
-            if (type == NET_MESSAGE_GAME_PACKET && (game_update_packet->flags & 8) != 0) {
-                enet_packet_destroy(packet);
-                packet = enet_packet_create(nullptr, length + game_update_packet->data_extended_size + 5, flags);
-            }
-
-            *(eNetMessageType*)packet->data = type;
-            std::memcpy(packet->data + sizeof(eNetMessageType), game_update_packet, length);
-
-            if (type == NET_MESSAGE_GAME_PACKET && (game_update_packet->flags & 8) != 0) {
+            if (type == NET_MESSAGE_GAME_PACKET && (game_update_packet->flags & 0x8) != 0) {
+                ENetPacket *packet = enet_packet_create(nullptr, length + game_update_packet->data_extended_size + 5, flags);
+                *(eNetMessageType *)packet->data = type;
+                std::memcpy(packet->data + sizeof(eNetMessageType), game_update_packet, length);
                 std::memcpy(packet->data + length + sizeof(eNetMessageType), extended_data, game_update_packet->data_extended_size);
-            }
 
-            ret = enet_peer_send(m_peer, 0, packet) != 0;
-            if (ret) {
-                enet_packet_destroy(packet);
+                ret = enet_peer_send(m_peer, 0, packet) != 0;
+                if (ret) {
+                    enet_packet_destroy(packet);
+                }
+            }
+            else {
+                ENetPacket *packet = enet_packet_create(nullptr, length + 5, flags);
+                *(eNetMessageType *) packet->data = type;
+                std::memcpy(packet->data + sizeof(eNetMessageType), game_update_packet, length);
+
+                ret = enet_peer_send(m_peer, 0, packet) != 0;
+                if (ret) {
+                    enet_packet_destroy(packet);
+                }
             }
         }
 
         return ret;
     }
 
-    int Player::send_variant(VariantList &&variant_list, enet_uint32 flags) {
+    int Player::send_variant(VariantList &&variant_list, uint32_t net_id, enet_uint32 flags) {
         if (variant_list.Get(0).GetType() == eVariantType::TYPE_UNUSED) {
             return -1;
         }
 
-        auto *game_update_packet = new GameUpdatePacket{};
-
         uint32_t data_size;
         uint8_t *data = variant_list.SerializeToMem(&data_size, nullptr);
 
-        game_update_packet->packet_type = PACKET_CALL_FUNCTION;
-        game_update_packet->net_id = -1;
-        game_update_packet->flags |= 0x8;
-        game_update_packet->data_extended_size = data_size;
-        game_update_packet->data_extended = reinterpret_cast<uint32_t&>(data);
+        GameUpdatePacket game_update_packet{};
+        game_update_packet.packet_type = PACKET_CALL_FUNCTION;
+        game_update_packet.net_id = net_id;
+        game_update_packet.flags |= 0x8;
+        game_update_packet.data_extended_size = data_size;
+        game_update_packet.data_extended = reinterpret_cast<uint32_t&>(data);
 
-        int ret{ send_raw_packet(NET_MESSAGE_GAME_PACKET, game_update_packet, sizeof(GameUpdatePacket) - 4, data, flags) };
+        int ret{ send_raw_packet(NET_MESSAGE_GAME_PACKET, &game_update_packet, sizeof(GameUpdatePacket) - 4, data, flags) };
 
         delete data;
-        delete game_update_packet;
-
         return ret;
+    }
+
+    int Player::send_log(const std::string &log, bool on_console_message) {
+        if (!on_console_message) {
+            return send_packet(NET_MESSAGE_GAME_MESSAGE, fmt::format("action|log\nmsg|{}", log));
+        }
+
+        return send_variant({
+            "OnConsoleMessage",
+            log
+        });
     }
 }

@@ -22,9 +22,4 @@ namespace player {
     private:
         std::vector<Player *> m_players;
     };
-
-    inline PlayerPool *get_player_pool() {
-        static auto *player_pool = new PlayerPool{};
-        return player_pool;
-    }
 }

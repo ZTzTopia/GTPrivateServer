@@ -20,8 +20,8 @@ namespace player {
             // player->unload("enter_game");
         });
         player->load("join_request", [player, generic_text_event]() {
-            generic_text_event->enter_game();
-            // player->unload("enter_game");
+            generic_text_event->join_request();
+            // player->unload("join_request");
         });
     }
 }

@@ -397,7 +397,7 @@ uint8_t *VariantList::SerializeToMem(uint32_t *pSizeOut, uint8_t *pDest) {
 
     int totalSize = memNeeded + 1 + (varsUsed * 2);
     if (!pDest) {
-        pDest = new uint8_t[totalSize]; //1 is to write how many are coming
+        pDest = new uint8_t[totalSize]; // 1 is to write how many are coming
     }
 
     // Write it

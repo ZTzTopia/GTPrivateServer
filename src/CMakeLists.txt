@@ -22,7 +22,11 @@ add_executable(${PROJECT_NAME}
 
         server/server.cpp
         server/servergateway.cpp
-        server/serverpool.cpp)
+        server/serverpool.cpp
+
+        world/tile.cpp
+        world/world.cpp
+        world/worldpool.cpp)
 
 target_link_libraries(${PROJECT_NAME} enet)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/enet/include)
