@@ -9,8 +9,8 @@ namespace player {
         m_players.clear();
     }
 
-    Player *PlayerPool::new_player(ENetPeer *peer) {
-        auto *player = new Player{ peer };
+    Player *PlayerPool::new_player(int server_id, ENetPeer *peer) {
+        auto *player = new Player{ server_id, peer };
         add_player(player);
         return player;
     }

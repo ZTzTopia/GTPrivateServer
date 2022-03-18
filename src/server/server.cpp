@@ -3,7 +3,7 @@
 #include "server.h"
 
 namespace server {
-    Server::Server(enet_uint16 port, size_t max_peer) {
+    Server::Server(int server_id, enet_uint16 port, size_t max_peer) : m_server_id(server_id) {
         if (create_host(port, max_peer) != 0) {
             spdlog::error("Server with port {} failed to start.", port);
             delete this;
@@ -45,7 +45,7 @@ namespace server {
     void Server::on_connect(ENetPeer *peer) {
         spdlog::info("Client connected. (id: {})", peer->connectID);
 
-        player::Player *player = m_player_pool->new_player(peer);
+        player::Player *player = m_player_pool->new_player(m_server_id, peer);
         player->send_packet(player::NET_MESSAGE_SERVER_HELLO, "");
     }
 
@@ -60,14 +60,14 @@ namespace server {
             return;
         }
 
-        if (peer->packetsSent > 128) {
+        if (peer->packetsSent >= 256) {
             spdlog::info("Client {} kicked for flooding.", peer->connectID);
             enet_peer_disconnect_later(peer, 0);
             return;
         }
 
         player::eNetMessageType type = player::get_message_type(packet);
-        // spdlog::info("Type {}", type);
+        spdlog::info("Type {}", type);
 
         switch (type) {
             case player::NET_MESSAGE_GENERIC_TEXT:
@@ -81,7 +81,7 @@ namespace server {
                 }
 
                 // spdlog::info("Packet type {}", player::get_struct(packet)->packet_type);
-                // player->process_game_packet(player::get_struct(packet));
+                player->process_game_packet(player::get_struct(packet));
                 break;
             default:
                 spdlog::error("Unknown message type: {}", type);

@@ -1,32 +1,54 @@
 #include "player.h"
 #include "eventmanager.h"
 
-namespace player {
-    Player::Player(ENetPeer *peer)
-        : EventTrigger()
-        , m_peer(peer) {
-        peer->data = reinterpret_cast<void *>(peer->connectID);
+#include "events/tank/state.h"
+#include "events/tank/tile_change_request.h"
+#include "events/text/enter_game.h"
+#include "events/text/input.h"
+#include "events/text/join_request.h"
+#include "events/text/quit.h"
+#include "events/text/quit_to_exit.h"
+#include "events/text/refresh_item_data.h"
+#include "events/text/requestedName.h"
 
-        EventManager::load(this);
+namespace player {
+    Player::Player(int server_id, ENetPeer *peer)
+        : EventManager()
+        , m_server_id(server_id)
+        , m_peer(peer) {
+        peer->data = reinterpret_cast<void *>(&peer->connectID);
+
+        // Memory leak or no? or it destroyed after Player is destroyed?
+        events::state{ this };
+        events::tile_change_request{ this };
+        events::enter_game{ this };
+        events::input{ this };
+        events::join_request{ this };
+        events::quit{ this };
+        events::quit_to_exit{ this };
+        events::refresh_item_data{ this };
+        events::requestedName{ this };
     }
 
     void Player::process_generic_text_or_game_message(const std::string &text) {
-        m_last_packet_text = text;
-
         std::string first_text{ text.substr(0, text.find('|')) };
         if (first_text == "action") {
             std::string action_text{ text.substr(text.find('|') + 1, text.find('\n') - (text.find('|') + 1)) };
-            if (!trigger(action_text)) {
+            if (!execute(action_text, text)) {
                 spdlog::error("Unhandled action: {}", action_text.c_str());
             }
         }
         else {
-            if (!trigger(first_text)) {
+            if (!execute(first_text, text)) {
                 spdlog::error("Unhandled generic text: {}", first_text.c_str());
             }
         }
+    }
 
-        m_last_packet_text.clear();
+    void Player::process_game_packet(GameUpdatePacket *game_update_packet) {
+        if (!execute("gup_" + std::to_string(game_update_packet->packet_type), game_update_packet)) {
+            spdlog::error("Unhandled game update packet type: {}", game_update_packet->packet_type);
+        }
     }
 
     int Player::send_packet(eNetMessageType type, const std::string &data) {
@@ -94,6 +116,25 @@ namespace player {
         game_update_packet.data_extended = reinterpret_cast<uint32_t&>(data);
 
         int ret{ send_raw_packet(NET_MESSAGE_GAME_PACKET, &game_update_packet, sizeof(GameUpdatePacket) - 4, data, flags) };
+
+        delete data;
+        return ret;
+    }
+
+    int Player::send_variant(VariantList &&variant_list, GameUpdatePacket *game_update_packet, enet_uint32 flags) {
+        if (variant_list.Get(0).GetType() == eVariantType::TYPE_UNUSED) {
+            return -1;
+        }
+
+        uint32_t data_size;
+        uint8_t *data = variant_list.SerializeToMem(&data_size, nullptr);
+
+        game_update_packet->packet_type = PACKET_CALL_FUNCTION;
+        game_update_packet->flags |= 0x8;
+        game_update_packet->data_extended_size = data_size;
+        game_update_packet->data_extended = reinterpret_cast<uint32_t&>(data);
+
+        int ret{ send_raw_packet(NET_MESSAGE_GAME_PACKET, game_update_packet, sizeof(GameUpdatePacket) - 4, data, flags) };
 
         delete data;
         return ret;

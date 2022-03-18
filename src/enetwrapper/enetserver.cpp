@@ -49,7 +49,7 @@ namespace enetwrapper {
         }
 
         m_host->checksum = enet_crc32;
-        m_host->duplicatePeers = 3; // 3 peers are allowed to connect from the same IP address.
+        // m_host->duplicatePeers = 3; // 3 peers are allowed to connect from the same IP address.
         // m_host->usingNewPacket = 1;
         m_host->usingNewPacketForServer = 1;
 		if (enet_host_compress_with_range_coder(m_host) != 0) {

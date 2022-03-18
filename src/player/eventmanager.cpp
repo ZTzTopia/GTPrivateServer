@@ -1,27 +1,41 @@
 #include "eventmanager.h"
-#include "generictextevent.h"
 
 namespace player {
-    void EventManager::load(Player *player) {
-        auto *generic_text_event = new GenericTextEvent{ player };
-        player->load("quit", [player, generic_text_event]() {
-            generic_text_event->quit();
-            // player->unload("quit");
-        });
-        player->load("requestedName", [player, generic_text_event]() {
-            generic_text_event->guest();
-            // player->unload("requestedName");
-        });
-        player->load("refresh_item_data", [generic_text_event]() {
-            generic_text_event->refresh_item_data();
-        });
-        player->load("enter_game", [player, generic_text_event]() {
-            generic_text_event->enter_game();
-            // player->unload("enter_game");
-        });
-        player->load("join_request", [player, generic_text_event]() {
-            generic_text_event->join_request();
-            // player->unload("join_request");
-        });
+    EventManager::~EventManager() {
+        m_events.clear();
     }
+
+    /*void EventManager::load(const std::string &event_name, const std::function<void(const std::string &)> &callback) {
+        if (event_name.empty()) {
+            return;
+        }
+
+        if (callback == nullptr) {
+            return;
+        }
+
+        m_events.insert_or_assign(std::hash<std::string>{}(event_name), callback);
+    }
+
+    void EventManager::unload(const std::string &event_name) {
+        if (event_name.empty()) {
+            return;
+        }
+
+        m_events.erase(std::hash<std::string>{}(event_name));
+    }
+
+    bool EventManager::execute(const std::string &event_name, const std::string &string) {
+        if (event_name.empty()) {
+            return false;
+        }
+
+        auto it = m_events.find(std::hash<std::string>{}(event_name));
+        if (it != m_events.end()) {
+            it->second(string);
+            return true;
+        }
+
+        return false;
+    }*/
 }

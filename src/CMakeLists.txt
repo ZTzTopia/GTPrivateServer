@@ -11,10 +11,18 @@ add_executable(${PROJECT_NAME}
         items/itemsdb.cpp
 
         player/eventmanager.cpp
-        player/eventtrigger.cpp
-        player/generictextevent.cpp
         player/playerpool.cpp
         player/player.cpp
+
+        player/events/tank/state.cpp
+        player/events/tank/tile_change_request.cpp
+        player/events/text/enter_game.cpp
+        player/events/text/input.cpp
+        player/events/text/join_request.cpp
+        player/events/text/quit.cpp
+        player/events/text/quit_to_exit.cpp
+        player/events/text/refresh_item_data.cpp
+        player/events/text/requestedName.cpp
 
         proton/shared/manager/VariantDB.cpp
         proton/shared/util/ResourceUtils.cpp

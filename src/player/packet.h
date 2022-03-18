@@ -84,14 +84,22 @@ namespace player {
         uint32_t unk5; // 8
         uint32_t flags; // 12
         float unk7; // 16
-        uint32_t unk8; // 20
+        union { // 20
+            uint32_t dec_item_data_size;
+            uint32_t item_id;
+            uint32_t tile_damage;
+        };
         float unk9; // 24
         float unk10; // 28
         float unk11; // 32
         float unk12; // 36
         float unk13; // 40
-        uint32_t unk14; // 44
-        uint32_t unk15; // 48
+        union { // 44
+            uint32_t m_tile_pos_x;
+        };
+        union { // 48
+            uint32_t m_tile_pos_y;
+        };
         uint32_t data_extended_size; // 52
         uint32_t data_extended; // 56
     };

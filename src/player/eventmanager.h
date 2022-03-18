@@ -3,15 +3,87 @@
 #include <string>
 #include <unordered_map>
 #include <functional>
-
-#include "player.h"
+#include <algorithm>
 
 namespace player {
     class EventManager {
     public:
         EventManager() = default;
-        ~EventManager() = default;
+        ~EventManager();
 
-        static void load(Player *player);
+        template <typename Callback>
+        void load(const std::string &name, Callback cb, bool once = false) {
+            auto f = to_function(cb);
+            auto fn = new decltype(f)(to_function(cb));
+            m_events[name].emplace_back(static_cast<void *>(fn), once);
+        }
+
+        template <typename Callback>
+        void load_once(const std::string& name, Callback cb) {
+            load(name, cb, true);
+        }
+
+        void unload() {
+            std::for_each(m_events.begin(), m_events.end(), [](auto &pair) {
+                auto& listeners = pair.second;
+                std::for_each(listeners.begin(), listeners.end(), [](auto &listener) {
+                    ::operator delete(std::get<0>(listener));
+                });
+            });
+
+            m_events.clear();
+        }
+
+        void unload(const std::string &name) {
+            auto it = m_events.find(name);
+            if (it != m_events.end()) {
+                auto& listeners = it->second;
+                std::for_each(listeners.begin(), listeners.end(), [](auto& listener) {
+                    ::operator delete(std::get<0>(listener));
+                });
+
+                m_events.erase(it);
+            }
+        }
+
+        template <typename ...Args>
+        bool execute(const std::string& name, Args... args) {
+            auto it = m_events.find(name);
+            if (it != m_events.end()) {
+                auto &listeners = it->second;
+                for (int i = 0; i < listeners.size(); i++) {
+                    auto &listener = listeners.at(i);
+                    auto fn = static_cast<std::function<void(Args...)> *>(std::get<0>(listener));
+                    (*fn)(args...);
+
+                    if (std::get<1>(listener)) {
+                        ::operator delete(std::get<0>(listener));
+                        listeners.erase(listeners.begin() + i);
+                        listeners.shrink_to_fit();
+                    }
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
+    private:
+        template <typename Callback>
+        struct traits : public traits<decltype(&Callback::operator())> {};
+
+        template <typename ClassType, typename R, typename... Args>
+        struct traits<R(ClassType:: *)(Args...) const> {
+            using fn = std::function<R (Args...)>;
+        };
+
+        template <typename Callback>
+        typename traits<Callback>::fn to_function(Callback& cb) {
+            return static_cast<typename traits<Callback>::fn>(cb);
+        }
+
+    private:
+        std::unordered_map<std::string, std::vector<std::tuple<void *, bool>>> m_events;
     };
 }

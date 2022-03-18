@@ -2,14 +2,12 @@
 #include "player.h"
 
 namespace player {
-    class EventContext {
+    class EventContextText {
     public:
-        explicit EventContext(Player *player) { m_player = player; }
-        ~EventContext() = default;
+        explicit EventContextText(Player *player) { m_player = player; }
+        ~EventContextText() = default;
 
-        [[nodiscard]] Player *get_player() const { return m_player; }
-
-    private:
+    public:
         Player *m_player;
     };
 }

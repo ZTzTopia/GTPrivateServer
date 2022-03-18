@@ -11,6 +11,8 @@ namespace items {
 
         int init();
 
+        [[nodiscard]] ItemInfo* get_item_info(uint16_t id) const { return m_items[id]; }
+
         [[nodiscard]] uint32_t get_hash() const { return m_hash; }
 
         [[nodiscard]] uint32_t get_size() const { return m_data_size; }

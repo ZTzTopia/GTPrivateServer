@@ -20,14 +20,14 @@ namespace server {
     void ServerGateway::on_connect(ENetPeer *peer) {
         spdlog::info("Client connected to server gateway. (id: {})", peer->connectID);
 
-        player::Player *player = m_player_pool->new_player(peer);
+        player::Player *player = m_player_pool->new_player(-1, peer);
         player->send_packet(player::NET_MESSAGE_SERVER_HELLO, "");
     }
 
     void ServerGateway::on_receive(ENetPeer *peer, ENetPacket *packet) {
         player::Player *player = m_player_pool->get_player(peer->connectID);
         if (!player) {
-            enet_peer_disconnect(peer, 0);
+            enet_peer_disconnect_later(peer, 0);
             return;
         }
 
@@ -37,7 +37,7 @@ namespace server {
                 auto connect_id = reinterpret_cast<uint32_t&>(peer->data);
                 m_player_pool->remove_player(connect_id);
 
-                enet_peer_disconnect(peer, 0);
+                enet_peer_disconnect_now(peer, 0);
 
                 spdlog::info("Client disconnected from server gateway. (id: {})", connect_id);
                 return;

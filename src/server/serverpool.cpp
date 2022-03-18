@@ -39,7 +39,9 @@ namespace server {
     }
 
     void ServerPool::new_server(enet_uint16 port, size_t max_peer) {
+        static int server_id{ 0 };
         auto *server = new Server{
+            server_id++,
             port,
             max_peer
         };

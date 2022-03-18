@@ -2,39 +2,77 @@
 #include "../utils/random.h"
 
 namespace world {
-    void World::generate_new_world(uint32_t width, uint32_t height) {
+    // 24 * 100 = 2400
+    // 54 * 100 = 5400
+    // Dirt block break hit = 3
+
+    World::World(const std::string &name)
+        : m_name(name)
+        , m_width(100)
+        , m_height(54)
+        , m_total_net_id(0)
+        , m_total_object_id(0)
+        , m_owner_user_id(0) {}
+
+    World::~World() {
+        for (auto &tiles : m_tiles) {
+            delete tiles;
+        }
+
+        m_tiles.clear();
+        m_players.clear();
+    }
+
+    void World::send_to_all(std::function<void(player::Player *)> callback) {
+        for (auto &player : m_players) {
+            callback(player);
+        }
+    }
+
+    void World::add_player(player::Player *player) {
+        m_players.push_back(player);
+    }
+
+    void World::remove_player(player::Player *player) {
+        m_players.erase(std::remove(m_players.begin(), m_players.end(), player), m_players.end());
+        m_players.shrink_to_fit();
+    }
+
+    void World::generate(uint16_t width, uint16_t height) {
         auto rand_generator = random::get_generator_static();
-        int main_door_pos_x = rand_generator.uniform(static_cast<uint32_t>(1), width - 1);
+        int main_door_pos_x = rand_generator.uniform(width - (width - 1), width - 1);
 
         m_tiles.reserve(width * height);
         for (int i = 0; i < width * height; i++) {
             Tile *tile = new Tile{};
-            tile->m_fg = 0;
-            tile->m_bg = 0;
 
-            if (i == 3600 + main_door_pos_x) {
-                tile->m_fg = 8; // 6
+            if (i == 2400 + main_door_pos_x) {
+                tile->set_fg(6);
+                tile->set_label("EXIT");
+
+                m_white_door_pos.x = main_door_pos_x;
+                m_white_door_pos.y = static_cast<int>((i - main_door_pos_x) / width);
             }
-            else if (i == 3700 + main_door_pos_x) {
-                tile->m_fg = 8;
+            else if (i == 2500 + main_door_pos_x) {
+                tile->set_fg(8);
             }
-            else if (i >= 3800 && i < 5400 && rand_generator.uniform(0, 100) < 4) {
-                tile->m_fg = 10;
+            else if (i >= 2600 && i < 4800 && rand_generator.uniform(0, 100) < 4) {
+                tile->set_fg(10);
             }
-            else if (i >= 3700 && i < 5400) {
-                if (i > 5000 && rand_generator.uniform(0, 100) < 40) {
-                    tile->m_fg = 4;
+            else if (i >= 2500 && i < 4800) {
+                if (i > 4400 && rand_generator.uniform(0, 100) < 40) {
+                    tile->set_fg(4);
                 }
                 else {
-                    tile->m_fg = 2;
+                    tile->set_fg(2);
                 }
             }
-            else if (i >= 5400) {
-                tile->m_fg = 8;
+            else if (i >= 4800) {
+                tile->set_fg(8);
             }
 
-            if (i >= 3700) {
-                tile->m_bg = 14;
+            if (i >= 2500) {
+                tile->set_bg(14);
             }
 
             m_tiles.push_back(tile);
@@ -42,9 +80,9 @@ namespace world {
     }
 
     uint8_t *World::serialize_to_mem(uint32_t *size_out, uint8_t *dest) {
-        uint32_t mem_need = 20 + 4 + 16;
+        uint32_t mem_need = 20 + m_name.length() + 16;
         for (auto &tile : m_tiles) {
-            mem_need += 8;
+            mem_need += tile->calculate_memory_needed();
         }
 
         if (dest == nullptr) {
@@ -59,7 +97,7 @@ namespace world {
         std::memcpy(dest + mem_pos, &reserved, 4);
         mem_pos += 4;
 
-        std::string memeememafmas{ "dek1" };
+        std::string memeememafmas{ m_name };
         uint16_t len = memeememafmas.length();
         std::memcpy(dest + mem_pos, &len, 2);
         mem_pos += 2;
@@ -71,7 +109,7 @@ namespace world {
         std::memcpy(dest + mem_pos, &width, 4);
         mem_pos += 4;
 
-        uint32_t height = 60;
+        uint32_t height = 54;
         std::memcpy(dest + mem_pos, &height, 4);
         mem_pos += 4;
 
@@ -80,19 +118,34 @@ namespace world {
         mem_pos += 4;
         
         for (auto &tile : m_tiles) {
-            std::memcpy(dest + mem_pos, &tile->m_fg, 2);
+            uint16_t fg = tile->get_fg();
+            std::memcpy(dest + mem_pos, &fg, 2);
             mem_pos += 2;
 
-            std::memcpy(dest + mem_pos, &tile->m_bg, 2);
+            uint16_t bg = tile->get_bg();
+            std::memcpy(dest + mem_pos, &bg, 2);
             mem_pos += 2;
 
             uint32_t m_lp = 0;
             std::memcpy(dest + mem_pos, &m_lp, 2);
             mem_pos += 2;
 
-            uint32_t m_fl = 0;
-            std::memcpy(dest + mem_pos, &m_fl, 2);
+            uint32_t flags = tile->get_flags();
+            std::memcpy(dest + mem_pos, &flags, 2);
             mem_pos += 2;
+
+            if ((flags & TILEFLAG_TILEEXTRA) == 1) {
+                dest[mem_pos++] = 1;
+
+                uint16_t len = static_cast<uint16_t>(tile->get_label().size());
+                std::memcpy(dest + mem_pos, &len, 2);
+                mem_pos += 2;
+
+                std::memcpy(dest + mem_pos, tile->get_label().c_str(), len);
+                mem_pos += len;
+
+                dest[mem_pos++] = 0;
+            }
         }
 
         uint32_t oc = 0;
@@ -113,5 +166,13 @@ namespace world {
 
         *size_out = mem_pos;
         return dest;
+    }
+
+    Tile *World::get_tile(int x, int y) {
+        if (x < 0 || y < 0 || x > 100 || y > 60) {
+            return nullptr;
+        }
+
+        return m_tiles[x + y * 100];
     }
 }

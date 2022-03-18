@@ -2,6 +2,7 @@
 #include <spdlog/spdlog.h>
 
 #include "itemsdb.h"
+#include "../config.h"
 #include "../proton/shared/util/ResourceUtils.h"
 
 namespace items {
@@ -61,7 +62,7 @@ namespace items {
     int ItemsDB::init() {
         spdlog::info("Loading items database..");
 
-        std::ifstream file("./items.dat", std::ifstream::in | std::ifstream::binary);
+        std::ifstream file(fmt::format("{}/items.dat", config::data::root), std::ifstream::in | std::ifstream::binary);
         if (!file.is_open()) {
             return -1;
         }
