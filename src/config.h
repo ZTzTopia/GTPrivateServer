@@ -17,6 +17,13 @@ namespace config {
         constexpr auto max_peer = 32;
     }
 
+    namespace database {
+        constexpr std::string_view host = "jdbc:mariadb://127.0.0.1:3306";
+        constexpr std::string_view user = "root";
+        constexpr std::string_view password = "";
+        constexpr std::string_view database = "gtps";
+    }
+
     namespace cdn {
         constexpr std::string_view host = "ubistatic-a.akamaihd.net";
         constexpr std::string_view cache = "0098/32621/cache/";

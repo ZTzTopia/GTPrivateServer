@@ -17,7 +17,9 @@ namespace world {
         , m_height(54)
         , m_total_net_id(0)
         , m_total_object_id(0)
-        , m_owner_user_id(0) {}
+        , m_owner_user_id(0) {
+        std::transform(m_name.begin(), m_name.end(), m_name.begin(), ::toupper);
+    }
 
     World::~World() {
         for (auto &tiles : m_tiles) {
@@ -137,6 +139,7 @@ namespace world {
 
         try {
             sql::PreparedStatement *stmnt(mariadb::get_sql_connection()->prepareStatement("INSERT INTO worlds (name, width, height, data) VALUES (?, ?, ?, ?)"));
+            std::transform(m_name.begin(), m_name.end(), m_name.begin(), ::toupper);
             stmnt->setString(1, m_name.c_str());
             stmnt->setUInt(2, width);
             stmnt->setUInt(3, height);
@@ -152,13 +155,15 @@ namespace world {
     }
 
     bool World::load(const std::string &name) {
+        std::transform(m_name.begin(), m_name.end(), m_name.begin(), ::toupper);
+
         try {
             sql::Statement *stmnt(mariadb::get_sql_connection()->createStatement());
-            std::string fmt = fmt::format("SELECT * FROM worlds WHERE name = '{}'", name);
+            std::string fmt = fmt::format("SELECT * FROM worlds WHERE name = '{}'", m_name);
             sql::ResultSet *res = stmnt->executeQuery(fmt.c_str());
 
             while (res->next()) {
-                m_name = std::string{ res->getString(1).c_str() };
+                // m_name = std::string{ res->getString(1).c_str() };
                 m_width = res->getUInt(2);
                 m_height = res->getUInt(3);
                 auto out = res->getBlob(4);
