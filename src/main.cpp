@@ -2,8 +2,8 @@
 #include <csignal>
 #include <thread>
 #include <spdlog/spdlog.h>
-#include <spdlog/async.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <mariadb/conncpp.hpp>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN

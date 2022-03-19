@@ -49,8 +49,8 @@ namespace world {
         void set_label(const std::string &label) { set_flags(TILEFLAG_TILEEXTRA); m_label = label; }
         [[nodiscard]] std::string get_label() const { return m_label; }
 
-        [[nodiscard]] uint16_t get_front_tile() const { return m_fg != 0 ? m_fg : m_bg; }
-        [[nodiscard]] items::ItemInfo *get_item_info() const { return items::get_items_db()->get_item_info(get_front_tile()); }
+        [[nodiscard]] uint16_t get_front_id() const { return m_fg != 0 ? m_fg : m_bg; }
+        [[nodiscard]] items::ItemInfo *get_item_info() const { return items::get_items_db()->get_item_info(get_front_id()); }
 
     private:
         uint16_t m_fg;

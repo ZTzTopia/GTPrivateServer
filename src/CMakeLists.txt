@@ -91,6 +91,23 @@ else ()
     endif ()
 endif ()
 
+# MariaDB
+if (WIN32)
+    set(MARIADB_PATH "C:\\Program Files\\MariaDB\\MariaDB C++ Connector 64-bit")
+    if (NOT EXISTS ${MARIADB_PATH})
+        set(MARIADB_PATH "C:\\Program Files (x86)\\MariaDB\\MariaDB C++ Connector 32-bit")
+    endif ()
+else ()
+    message(FATAL_ERROR "Hmm i don't implement this yet.")
+    # message(FATAL_ERROR "Please install MariaDB with your package manager.")
+endif ()
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+    ${MARIADB_PATH}/include
+    ${MARIADB_PATH}/include/mariadb/cppconn)
+
+target_link_libraries(${PROJECT_NAME} ${MARIADB_PATH}/mariadbcpp.lib)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED ON

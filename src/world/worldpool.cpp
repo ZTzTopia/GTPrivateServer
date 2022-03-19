@@ -17,7 +17,9 @@ namespace world {
 
     World *WorldPool::new_world(const std::string &world_name) {
         auto world = new World{ world_name };
-        world->generate();
+        if (!world->load(world_name)) {
+            world->generate();
+        }
         add_world(world);
         return world;
     }

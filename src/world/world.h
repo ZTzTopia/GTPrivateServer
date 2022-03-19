@@ -9,20 +9,23 @@
 namespace world {
     class World {
     public:
-        explicit World(const std::string &name);
+        explicit World(std::string name);
         ~World();
 
-        void send_to_all(std::function<void(player::Player *)> callback);
+        void send_to_all(const std::function<void(player::Player *)> &callback);
 
         void add_player(player::Player *player);
         void remove_player(player::Player *player);
         void respawn_player(player::Player *player) {};
 
         void generate(uint16_t width = 100, uint16_t height = 54);
-        void load(const std::string &name) {}; // Todo: load from file.
+        bool load(const std::string &name);
 
         Tile *get_tile(int x, int y);
         Tile *get_tile(CL_Vec2i vec2i) { return get_tile(vec2i.x, vec2i.y); }
+        CL_Vec2i get_tile_pos(uint16_t id);
+        CL_Vec2i get_tile_fg_pos(uint16_t id);
+        CL_Vec2i get_tile_bg_pos(uint16_t id);
 
         uint8_t *serialize_to_mem(uint32_t *size_out, uint8_t *dest);
 

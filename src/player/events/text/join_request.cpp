@@ -50,8 +50,8 @@ namespace events {
                     "type|local\n",
                     player->m_net_id,
                     player->m_user_id,
-                    world_pool->get_world(world_name)->get_white_door_pos().x * 32,
-                    (world_pool->get_world(world_name)->get_white_door_pos().y - 1) * 32,
+                    world_pool->get_world(world_name)->get_tile_pos(6).x * 32,
+                    world_pool->get_world(world_name)->get_tile_pos(6).y * 32,
                     player->m_display_name,
                     player->m_country
                 )
@@ -78,8 +78,8 @@ namespace events {
                         "onlineID|\n",
                         player->m_net_id,
                         player->m_user_id,
-                        world_pool->get_world(world_name)->get_white_door_pos().x * 32,
-                        (world_pool->get_world(world_name)->get_white_door_pos().y - 1) * 32,
+                        world_pool->get_world(world_name)->get_tile_pos(6).x * 32,
+                        world_pool->get_world(world_name)->get_tile_pos(6).y * 32,
                         player->m_display_name,
                         player->m_country
                     )
@@ -101,8 +101,8 @@ namespace events {
                         "onlineID|\n",
                         other_player->m_net_id,
                         other_player->m_user_id,
-                        world_pool->get_world(world_name)->get_white_door_pos().x * 32,
-                        (world_pool->get_world(world_name)->get_white_door_pos().y - 1) * 32,
+                        world_pool->get_world(world_name)->get_tile_pos(6).x * 32,
+                        world_pool->get_world(world_name)->get_tile_pos(6).y * 32,
                         other_player->m_display_name,
                         other_player->m_country
                     )

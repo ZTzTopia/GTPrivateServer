@@ -1,4 +1,9 @@
+#include <iostream>
+#include <sstream>
+#include <utility>
+
 #include "world.h"
+#include "../mariadb/conn.h"
 #include "../utils/random.h"
 
 namespace world {
@@ -6,8 +11,8 @@ namespace world {
     // 54 * 100 = 5400
     // Dirt block break hit = 3
 
-    World::World(const std::string &name)
-        : m_name(name)
+    World::World(std::string name)
+        : m_name(std::move(name))
         , m_width(100)
         , m_height(54)
         , m_total_net_id(0)
@@ -23,7 +28,7 @@ namespace world {
         m_players.clear();
     }
 
-    void World::send_to_all(std::function<void(player::Player *)> callback) {
+    void World::send_to_all(const std::function<void(player::Player *)> &callback) {
         for (auto &player : m_players) {
             callback(player);
         }
@@ -77,6 +82,155 @@ namespace world {
 
             m_tiles.push_back(tile);
         }
+
+        uint32_t mem_need = 0;
+        for (auto &tile : m_tiles) {
+            if (tile->get_front_id() == 0) {
+                continue;
+            }
+
+            mem_need += 4; // The tile position (x + (y * width))
+            mem_need += tile->calculate_memory_needed();
+        }
+
+        auto *data = new uint8_t[mem_need];
+        uint32_t mem_pos = 0;
+
+        for (uint32_t i = 0; i < m_tiles.size(); i++) {
+            Tile *tile = m_tiles[i];
+            if (tile->get_front_id() == 0) {
+                continue;
+            }
+
+            std::memcpy(data + mem_pos, &i, 4);
+            mem_pos += 4;
+
+            uint16_t fg = tile->get_fg();
+            std::memcpy(data + mem_pos, &fg, 2);
+            mem_pos += 2;
+
+            uint16_t bg = tile->get_bg();
+            std::memcpy(data + mem_pos, &bg, 2);
+            mem_pos += 2;
+
+            uint32_t m_lp = 0;
+            std::memcpy(data + mem_pos, &m_lp, 2);
+            mem_pos += 2;
+
+            uint32_t flags = tile->get_flags();
+            std::memcpy(data + mem_pos, &flags, 2);
+            mem_pos += 2;
+
+            if ((flags & TILEFLAG_TILEEXTRA) == 1) {
+                data[mem_pos++] = 1;
+
+                uint16_t len = static_cast<uint16_t>(tile->get_label().size());
+                std::memcpy(data + mem_pos, &len, 2);
+                mem_pos += 2;
+
+                std::memcpy(data + mem_pos, tile->get_label().c_str(), len);
+                mem_pos += len;
+
+                data[mem_pos++] = 0;
+            }
+        }
+
+        try {
+            sql::PreparedStatement *stmnt(mariadb::get_sql_connection()->prepareStatement("INSERT INTO worlds (name, width, height, data) VALUES (?, ?, ?, ?)"));
+            stmnt->setString(1, m_name.c_str());
+            stmnt->setUInt(2, width);
+            stmnt->setUInt(3, height);
+
+            std::stringstream in(std::string{ reinterpret_cast<char *>(data), mem_pos });
+            stmnt->setBlob(4, &in);
+
+            stmnt->executeQuery();
+        }
+        catch(sql::SQLException& e) {
+            spdlog::error("Error inserting new world: {}", e.what());
+        }
+    }
+
+    bool World::load(const std::string &name) {
+        try {
+            sql::Statement *stmnt(mariadb::get_sql_connection()->createStatement());
+            std::string fmt = fmt::format("SELECT * FROM worlds WHERE name = '{}'", name);
+            sql::ResultSet *res = stmnt->executeQuery(fmt.c_str());
+
+            while (res->next()) {
+                m_name = std::string{ res->getString(1).c_str() };
+                m_width = res->getUInt(2);
+                m_height = res->getUInt(3);
+                auto out = res->getBlob(4);
+
+                std::streamoff begin = out->tellg();
+                out->seekg(0, std::istream::end);
+                std::streamoff end = out->tellg();
+                out->seekg(0, std::istream::beg);
+                auto data_size = static_cast<uint32_t>(end - begin);
+
+                auto *data = new char[data_size];
+                out->read(reinterpret_cast<char *>(data), data_size);
+                uint32_t mem_pos = 0;
+
+                m_tiles.reserve(m_width * m_height);
+                for (uint32_t i = 0; i < m_width * m_height; i++) {
+                    uint64_t tile_pos = 0;
+                    std::memcpy(&tile_pos, data + mem_pos, 4);
+                    if (tile_pos != i) {
+                        Tile *tile = new Tile{};
+                        m_tiles.push_back(tile);
+                        continue;
+                    }
+
+                    Tile *tile = new Tile{};
+
+                    mem_pos += 4;
+
+                    uint16_t fg = 0;
+                    std::memcpy(&fg, data + mem_pos, 2);
+                    tile->set_fg(fg);
+                    mem_pos += 2;
+
+                    uint16_t bg = 0;
+                    std::memcpy(&bg, data + mem_pos, 2);
+                    tile->set_bg(bg);
+                    mem_pos += 2;
+
+                    uint16_t lp = 0;
+                    std::memcpy(&lp, data + mem_pos, 2);
+                    mem_pos += 2;
+
+                    uint16_t flags = 0;
+                    std::memcpy(&flags, data + mem_pos, 2);
+                    tile->set_flags(flags);
+                    mem_pos += 2;
+
+                    if ((tile->get_flags() & TILEFLAG_TILEEXTRA) == 1) {
+                        mem_pos++;
+
+                        uint16_t len = 0;
+                        std::memcpy(&len, data + mem_pos, 2);
+                        mem_pos += 2;
+
+                        std::string label(reinterpret_cast<char *>(data + mem_pos), len);
+                        tile->set_label(label);
+                        mem_pos += len;
+
+                        mem_pos++;
+                    }
+
+                    m_tiles.push_back(tile);
+                }
+
+                return true;
+            }
+        }
+        catch(sql::SQLException& e) {
+            spdlog::error("Error selecting world: {}", e.what());
+        }
+
+        return false;
     }
 
     uint8_t *World::serialize_to_mem(uint32_t *size_out, uint8_t *dest) {
@@ -174,5 +328,35 @@ namespace world {
         }
 
         return m_tiles[x + y * 100];
+    }
+
+    CL_Vec2i World::get_tile_pos(uint16_t id) {
+        for (int i = 0; i < m_tiles.size(); i++) {
+            if (m_tiles[i]->get_front_id() == id) {
+                return { i % m_width, i / m_width };
+            }
+        }
+
+        return { -1, -1 };
+    }
+
+    CL_Vec2i World::get_tile_fg_pos(uint16_t id) {
+        for (int i = 0; i < m_tiles.size(); i++) {
+            if (m_tiles[i]->get_fg() == id) {
+                return { i % m_width, i / m_width };
+            }
+        }
+
+        return { -1, -1 };
+    }
+
+    CL_Vec2i World::get_tile_bg_pos(uint16_t id) {
+        for (int i = 0; i < m_tiles.size(); i++) {
+            if (m_tiles[i]->get_fg() == id) {
+                return { i % m_width, i / m_width };
+            }
+        }
+
+        return { -1, -1 };
     }
 }
