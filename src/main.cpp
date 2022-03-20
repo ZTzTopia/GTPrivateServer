@@ -119,6 +119,14 @@ int main() {
     // The system is currently experiencing high loads and is not allowing server moves, please try again later.
     // Sub-server 1 (where WORLD is located) is currently lagged out, please try again later.
 
+    /*
+     * So I figured out how growtopia sub-servers work so I think he creating a new sub-server in the same computer,
+     * probably growtopia has a 4-6 computer. So yes I checked server stats with two different sub-servers (range 20-60)
+     * I got the same server load as in sub-server 180 was 27.81, 26.10, 26.71 and in sub-server 164 I got the same server load
+     * 27.81, 26.10, 26.71.
+     * Ok so my way is right 🤣.
+     */
+
     for (int i = 1; i < config::server_game::count; i++) {
         server::get_server_pool()->new_server(config::server_game::port + i + 1, config::server_game::max_peer);
         server::get_server_pool()->start();
