@@ -1,8 +1,8 @@
-#include <iostream>
 #include <utility>
 
 #include "world.h"
-#include "../mariadb/conn.h"
+#include "../database/database.h"
+#include "../database/worlds.h"
 #include "../proton/shared/util/ResourceUtils.h"
 #include "../utils/random.h"
 
@@ -138,28 +138,28 @@ namespace world {
         }
 
         int compressed_size;
-        data = lz4CompressToMemory(data, static_cast<int>(mem_pos), &compressed_size);
+        data = brotliCompressToMemory(data, static_cast<int>(mem_pos), &compressed_size);
 
         try {
-            sql::PreparedStatement *stmnt(mariadb::get_sql_connection()->prepareStatement(
-                "INSERT INTO worlds (name, width, height, decompressed_size_data, compressed_size_data, data) "
-                "VALUES (?, ?, ?, ?, ?, ?)"
+            sqlpp::mysql::connection *db = database::get_database()->get_connection();
+
+            std::vector<uint8_t> data_vector(data, data + compressed_size);
+
+            const auto worlds = Worlds{};
+            (*db)(insert_into(worlds).set(
+                worlds.name = m_name,
+                worlds.width = width,
+                worlds.height = height,
+                worlds.decompressed_size_data = mem_pos,
+                worlds.compressed_size_data = compressed_size,
+                worlds.data = data_vector
             ));
-
-            stmnt->setString(1, m_name.c_str());
-            stmnt->setUInt(2, width);
-            stmnt->setUInt(3, height);
-            stmnt->setInt(4, static_cast<int>(mem_pos));
-            stmnt->setInt(5, compressed_size);
-
-            std::stringstream in(std::string{ reinterpret_cast<char *>(data), static_cast<uint32_t>(compressed_size) });
-            stmnt->setBlob(6, &in);
-
-            stmnt->executeQuery();
         }
-        catch(sql::SQLException& e) {
+        catch(const std::exception &e) {
             spdlog::error("Error inserting new world: {}", e.what());
         }
+
+        delete[] data;
     }
 
     bool World::load(const std::string &name) {
@@ -168,85 +168,71 @@ namespace world {
         }
 
         try {
-            sql::Statement *stmnt(mariadb::get_sql_connection()->createStatement());
-            std::string fmt = fmt::format("SELECT * FROM worlds WHERE name = '{}'", m_name);
-            sql::ResultSet *res = stmnt->executeQuery(fmt.c_str());
+            sqlpp::mysql::connection *db = database::get_database()->get_connection();
 
-            while (res->next()) {
-                // m_name = std::string{ res->getString(1).c_str() };
-                m_width = res->getUInt(2);
-                m_height = res->getUInt(3);
-                int decompressed_size_data = res->getInt(4);
-                int compressed_size_data = res->getInt(5);
-                auto out = res->getBlob(6);
+            Worlds worlds{};
+            for (const auto &row : (*db)(select(all_of(worlds)).from(worlds).where(worlds.name == m_name))) {
+                if (row._is_valid) {
+                    uint8_t *data = brotliDecompressToMemory((uint8_t *)row.data.blob, static_cast<int>(row.compressed_size_data), static_cast<int>(row.decompressed_size_data));
 
-                std::streamoff begin = out->tellg();
-                out->seekg(0, std::istream::end);
-                std::streamoff end = out->tellg();
-                out->seekg(0, std::istream::beg);
-                auto data_size = static_cast<uint32_t>(end - begin);
+                    uint32_t mem_pos = 0;
 
-                auto *data = new char[decompressed_size_data];
-                out->read(reinterpret_cast<char *>(data), data_size);
+                    m_tiles.reserve(m_width * m_height);
+                    for (uint32_t i = 0; i < m_width * m_height; i++) {
+                        uint64_t tile_pos = 0;
+                        std::memcpy(&tile_pos, data + mem_pos, 4);
+                        if (tile_pos != i) {
+                            Tile *tile = new Tile{};
+                            m_tiles.push_back(tile);
+                            continue;
+                        }
 
-                data = (char*)lz4DecompressToMemory(reinterpret_cast<uint8_t *>(data), compressed_size_data, decompressed_size_data);
-
-                uint32_t mem_pos = 0;
-
-                m_tiles.reserve(m_width * m_height);
-                for (uint32_t i = 0; i < m_width * m_height; i++) {
-                    uint64_t tile_pos = 0;
-                    std::memcpy(&tile_pos, data + mem_pos, 4);
-                    if (tile_pos != i) {
                         Tile *tile = new Tile{};
-                        m_tiles.push_back(tile);
-                        continue;
-                    }
 
-                    Tile *tile = new Tile{};
+                        mem_pos += 4;
 
-                    mem_pos += 4;
-
-                    uint16_t fg = 0;
-                    std::memcpy(&fg, data + mem_pos, 2);
-                    tile->set_fg(fg);
-                    mem_pos += 2;
-
-                    uint16_t bg = 0;
-                    std::memcpy(&bg, data + mem_pos, 2);
-                    tile->set_bg(bg);
-                    mem_pos += 2;
-
-                    uint16_t lp = 0;
-                    std::memcpy(&lp, data + mem_pos, 2);
-                    mem_pos += 2;
-
-                    uint16_t flags = 0;
-                    std::memcpy(&flags, data + mem_pos, 2);
-                    tile->set_flags(flags);
-                    mem_pos += 2;
-
-                    if ((tile->get_flags() & TILEFLAG_TILEEXTRA) == 1) {
-                        mem_pos++;
-
-                        uint16_t len = 0;
-                        std::memcpy(&len, data + mem_pos, 2);
+                        uint16_t fg = 0;
+                        std::memcpy(&fg, data + mem_pos, 2);
+                        tile->set_fg(fg);
                         mem_pos += 2;
 
-                        std::string label(reinterpret_cast<char *>(data + mem_pos), len);
-                        tile->set_label(label);
-                        mem_pos += len;
+                        uint16_t bg = 0;
+                        std::memcpy(&bg, data + mem_pos, 2);
+                        tile->set_bg(bg);
+                        mem_pos += 2;
 
-                        mem_pos++;
+                        uint16_t lp = 0;
+                        std::memcpy(&lp, data + mem_pos, 2);
+                        mem_pos += 2;
+
+                        uint16_t flags = 0;
+                        std::memcpy(&flags, data + mem_pos, 2);
+                        tile->set_flags(flags);
+                        mem_pos += 2;
+
+                        if ((tile->get_flags() & TILEFLAG_TILEEXTRA) == 1) {
+                            mem_pos++;
+
+                            uint16_t len = 0;
+                            std::memcpy(&len, data + mem_pos, 2);
+                            mem_pos += 2;
+
+                            std::string label(reinterpret_cast<char *>(data + mem_pos), len);
+                            tile->set_label(label);
+                            mem_pos += len;
+
+                            mem_pos++;
+                        }
+
+                        m_tiles.push_back(tile);
                     }
 
-                    m_tiles.push_back(tile);
+                    delete[] data;
+                    return true;
                 }
-
-                return true;
             }
         }
-        catch(sql::SQLException& e) {
+        catch(const std::exception &e) {
             spdlog::error("Error selecting world: {}", e.what());
         }
 

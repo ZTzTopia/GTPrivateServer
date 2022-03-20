@@ -18,10 +18,13 @@ namespace config {
     }
 
     namespace database {
-        constexpr std::string_view host = "jdbc:mariadb://127.0.0.1:3306";
+        constexpr std::string_view host = "127.0.0.1";
+        constexpr auto port = 3306;
         constexpr std::string_view user = "root";
         constexpr std::string_view password = "";
         constexpr std::string_view database = "gtps";
+        constexpr auto auto_reconnect = true;
+        constexpr auto debug = false;
     }
 
     namespace cdn {

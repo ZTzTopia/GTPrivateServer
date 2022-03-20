@@ -1,37 +1,38 @@
 #include <cassert>
 #include <zlib.h>
-#include <lz4.h>
+#include <brotli/encode.h>
+#include <brotli/decode.h>
 
 #include "ResourceUtils.h"
 
 // You must SAFE_DELETE_ARRAY what it returns
-uint8_t *lz4CompressToMemory(uint8_t *pInput, int sizeBytes, int *pSizeCompressedOut) {
+uint8_t *brotliCompressToMemory(const uint8_t *pInput, int sizeBytes, int *pSizeCompressedOut, int compressionQuality) {
     assert(sizeBytes > 0);
     assert(pSizeCompressedOut != nullptr);
 
-    int compressedSize = LZ4_compressBound(sizeBytes);
+    size_t compressedSize = BrotliEncoderMaxCompressedSize(sizeBytes);
     auto *compressedData = new uint8_t[compressedSize];
 
-    int result = LZ4_compress_default((const char *)pInput, (char *)compressedData, sizeBytes, compressedSize);
-    if (result <= 0) {
+    BROTLI_BOOL success = BrotliEncoderCompress(compressionQuality, BROTLI_DEFAULT_WINDOW, BROTLI_MODE_GENERIC, sizeBytes, pInput, &compressedSize, compressedData);
+    if (!success) {
         delete[] compressedData;
         return nullptr;
     }
 
-    *pSizeCompressedOut = result;
+    *pSizeCompressedOut = (int)compressedSize;
     return compressedData;
 }
 
 // You must SAFE_DELETE_ARRAY what it returns
-uint8_t *lz4DecompressToMemory(uint8_t *pInput, int compressedSize, int decompressedSize) {
+uint8_t *brotliDecompressToMemory(const uint8_t *pInput, int compressedSize, int decompressedSize) {
     assert(compressedSize > 0);
     assert(decompressedSize > 0);
 
     auto *pDestBuff = new uint8_t[decompressedSize + 1]; // Room for extra null at the end;
 	pDestBuff[decompressedSize] = 0; // Add the extra null, if we decompressed a text file this can be useful
 
-    int result = LZ4_decompress_safe((const char *)pInput, (char*)pDestBuff, compressedSize, decompressedSize);
-    if (result < 0 || result != decompressedSize) {
+    BrotliDecoderResult decoder_result = BrotliDecoderDecompress(compressedSize, pInput, (size_t *)&decompressedSize, pDestBuff);
+    if (decoder_result != BROTLI_DECODER_RESULT_SUCCESS) {
         delete[] pDestBuff;
         return nullptr;
     }

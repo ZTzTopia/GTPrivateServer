@@ -1,41 +1,43 @@
-cmake_minimum_required(VERSION 3.0..3.21)
+cmake_minimum_required(VERSION 3.16..3.21)
 project(GTPS)
 
 include(FetchContent)
 
+option(BUILD_SHARED_LIBS "Build shared library" ON)
+
+file(GLOB INCLUDE_FILES
+    *.h
+    database/*.h
+    enetwrapper/*.h
+    http/*.h
+    include/*.h
+    include/backtrace-cpp/*.h
+    items/*.h
+    player/*.h
+    player/events/tank/*.h
+    player/events/text/*.h
+    proton/shared/manager/*.h
+    proton/shared/util/*.h
+    server/*.h
+    world/*.h)
+
+file(GLOB SOURCE_FILES
+    *.cpp
+    enetwrapper/*.cpp
+    items/*.cpp
+    player/*.cpp
+    player/events/tank/*.cpp
+    player/events/text/*.cpp
+    proton/shared/manager/*.cpp
+    proton/shared/util/*.cpp
+    server/*.cpp
+    world/*.cpp)
+
 add_executable(${PROJECT_NAME}
-        main.cpp
+    ${INCLUDE_FILES}
+    ${SOURCE_FILES})
 
-        enetwrapper/enetserver.cpp
-
-        items/itemsdb.cpp
-
-        player/eventmanager.cpp
-        player/playerpool.cpp
-        player/player.cpp
-
-        player/events/tank/state.cpp
-        player/events/tank/tile_change_request.cpp
-        player/events/text/enter_game.cpp
-        player/events/text/input.cpp
-        player/events/text/join_request.cpp
-        player/events/text/quit.cpp
-        player/events/text/quit_to_exit.cpp
-        player/events/text/refresh_item_data.cpp
-        player/events/text/requestedName.cpp
-
-        proton/shared/manager/VariantDB.cpp
-        proton/shared/util/ResourceUtils.cpp
-        proton/shared/util/Variant.cpp
-
-        server/server.cpp
-        server/servergateway.cpp
-        server/serverpool.cpp
-
-        world/tile.cpp
-        world/world.cpp
-        world/worldpool.cpp)
-
+target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 target_link_libraries(${PROJECT_NAME} enet)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/enet/include)
 
@@ -43,11 +45,11 @@ find_package(spdlog QUIET)
 if (spdlog_FOUND)
     target_link_libraries(${PROJECT_NAME} ${spdlog_LIBRARIES})
     target_include_directories(${PROJECT_NAME} PUBLIC ${spdlog_INCLUDE_DIR})
-else()
+else ()
     FetchContent_Declare(
         spdlog
         GIT_REPOSITORY https://github.com/gabime/spdlog.git
-        GIT_TAG b1478d98f017f3a7644e6e3a16fab6a47a5c26ba)
+        GIT_TAG origin/v1.x)
 
     FetchContent_GetProperties(spdlog)
     if (NOT spdlog_POPULATED)
@@ -73,7 +75,7 @@ else ()
         FetchContent_Declare(
             zlib
             GIT_REPOSITORY https://github.com/madler/zlib.git
-            GIT_TAG 2014a993addbc8f1b9785d97f55fd189792c2f78)
+            GIT_TAG origin/develop)
 
         FetchContent_GetProperties(zlib)
         if (NOT zlib_POPULATED)
@@ -87,53 +89,86 @@ else ()
                 EXCLUDE_FROM_ALL)
         endif ()
 
-        target_link_libraries(${PROJECT_NAME} zlibstatic)
+        target_link_libraries(${PROJECT_NAME} zlib)
     endif ()
 endif ()
 
-find_package(lz4 QUIET)
+find_package(brotli QUIET)
 if (MINGW OR NOT WIN32)
-    if (NOT lz4_FOUND)
-        message(FATAL_ERROR "Please install lz4 with your package manager.")
+    if (NOT brotli_FOUND)
+        message(FATAL_ERROR "Please install brotli with your package manager.")
     endif ()
 else ()
-    if (NOT lz4_FOUND)
+    if (NOT brotli_FOUND)
         FetchContent_Declare(
-            lz4
-            GIT_REPOSITORY https://github.com/lz4/lz4.git
-            GIT_TAG 5b138c01b4644c133e556d96ad6105d24c401cac)
+            brotli
+            GIT_REPOSITORY https://github.com/google/brotli.git
+            GIT_TAG origin/master)
 
-        FetchContent_GetProperties(lz4)
-        if (NOT lz4_POPULATED)
-            FetchContent_Populate(lz4)
+        FetchContent_GetProperties(brotli)
+        if (NOT brotli_POPULATED)
+            FetchContent_Populate(brotli)
             target_include_directories(${PROJECT_NAME} PUBLIC
-                ${lz4_SOURCE_DIR}/lib)
+                ${brotli_SOURCE_DIR}/c/include)
             add_subdirectory(
-                ${lz4_SOURCE_DIR}/build/cmake # The lz4 CMakeLists.txt
-                ${lz4_BINARY_DIR}
+                ${brotli_SOURCE_DIR}
+                ${brotli_BINARY_DIR}
                 EXCLUDE_FROM_ALL)
         endif ()
 
-        target_link_libraries(${PROJECT_NAME} lz4_static)
+        target_link_libraries(${PROJECT_NAME}
+            brotlienc
+            brotlidec)
     endif ()
 endif ()
 
-# MariaDB TODO: FetchContent
-if (WIN32)
-    set(MARIADB_PATH "C:\\Program Files\\MariaDB\\MariaDB C++ Connector 64-bit")
-    if (NOT EXISTS ${MARIADB_PATH})
-        set(MARIADB_PATH "C:\\Program Files (x86)\\MariaDB\\MariaDB C++ Connector 32-bit")
-    endif ()
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+
+find_package(MariaDB QUIET)
+if (NOT MariaDB_FOUND)
+    # If you on windows, you need to install mariadb from https://mariadb.com/downloads/connectors/
+    # Or you want the fetch content one?
+    message(FATAL_ERROR "Please install MariaDB with your package manager.")
 else ()
-    message(FATAL_ERROR "Hmm i don't implement this yet.")
-    # message(FATAL_ERROR "Please install MariaDB with your package manager.")
+    target_include_directories(${PROJECT_NAME} PUBLIC
+        ${MariaDB_INCLUDE_DIR}
+        ${MariaDB_INCLUDE_DIR}/mysql)
+
+    target_link_libraries(${PROJECT_NAME}
+        ${MariaDB_LIBRARIES})
 endif ()
 
-target_include_directories(${PROJECT_NAME} PUBLIC
-    ${MARIADB_PATH}/include
-    ${MARIADB_PATH}/include/mariadb/cppconn)
+find_package(sqlpp11 QUIET)
+if (sqlpp11_FOUND)
+    target_link_libraries(${PROJECT_NAME} ${sqlpp11_LIBRARIES})
+    target_include_directories(${PROJECT_NAME} PUBLIC ${sqlpp11_INCLUDE_DIR})
+else ()
+    if (NOT sqlpp11_FOUND)
+        FetchContent_Declare(
+            sqlpp11
+            GIT_REPOSITORY https://github.com/rbock/sqlpp11.git
+            GIT_TAG origin/main)
 
-target_link_libraries(${PROJECT_NAME} ${MARIADB_PATH}/mariadbcpp.lib)
+        FetchContent_GetProperties(sqlpp11)
+        if (NOT sqlpp11_POPULATED)
+            option(BUILD_MARIADB_CONNECTOR "Build MariaDB Connector" ON)
+
+            # Is only me got the error or you too? so need to fix it.
+            file(COPY ../cmake/FindMariaDB.cmake DESTINATION ${sqlpp11_SOURCE_DIR}/cmake)
+
+            FetchContent_Populate(sqlpp11)
+            target_include_directories(${PROJECT_NAME} PUBLIC
+                ${sqlpp11_SOURCE_DIR}/include)
+            add_subdirectory(
+                ${sqlpp11_SOURCE_DIR}
+                ${sqlpp11_BINARY_DIR}
+                EXCLUDE_FROM_ALL)
+        endif ()
+
+        target_link_libraries(${PROJECT_NAME}
+            sqlpp11::mariadb)
+    endif ()
+endif ()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 23

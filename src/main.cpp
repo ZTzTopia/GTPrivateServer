@@ -3,15 +3,9 @@
 #include <thread>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-#include <mariadb/conncpp.hpp>
-#include <lz4.h>
-
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#endif
 
 #include "config.h"
+#include "database/database.h"
 #include "enetwrapper/enetserver.h"
 #include "http/http.h"
 #include "include/backtrace-cpp/backtrace.hpp"
@@ -35,7 +29,7 @@ int main() {
     std::vector<spdlog::sink_ptr> sinks;
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
     sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>("server.log", 1024 * 1024, 8));
-    auto logger = std::make_shared<spdlog::logger>("server", begin(sinks), end(sinks));
+    auto logger = std::make_shared<spdlog::logger>("server", sinks.begin(), sinks.end());
     logger->set_pattern("[%Y-%m-%dT%TZ] [%n] [%^%l%$] [thread %t] %v");
     logger->set_level(spdlog::level::trace);
     logger->flush_on(spdlog::level::debug);
@@ -92,6 +86,11 @@ int main() {
     };
 
     // ==================================================================================================
+    // Database
+
+    database::get_database()->connect();
+
+    // ==================================================================================================
     // Item database
 
     if (items::get_items_db()->init() != 0) {
@@ -143,6 +142,8 @@ int main() {
     spdlog::info("Cleaning up..");
 
     // TODO: Move cleanup to signal handler.
+    delete database::get_database();
+
     if (items::get_items_db()) {
         delete items::get_items_db();
     }
