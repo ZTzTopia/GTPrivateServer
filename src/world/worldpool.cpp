@@ -10,7 +10,11 @@ namespace world {
     }
 
     uint8_t *WorldPool::get_world_data(const std::string &world_name, uint32_t *data_size) {
-        World *world = new_world(world_name);
+        World *world = get_world(world_name);
+        if (world == nullptr) {
+             world = new_world(world_name);
+        }
+
         uint8_t *data = world->serialize_to_mem(data_size, nullptr);
         return data;
     }

@@ -91,7 +91,34 @@ else ()
     endif ()
 endif ()
 
-# MariaDB
+find_package(lz4 QUIET)
+if (MINGW OR NOT WIN32)
+    if (NOT lz4_FOUND)
+        message(FATAL_ERROR "Please install lz4 with your package manager.")
+    endif ()
+else ()
+    if (NOT lz4_FOUND)
+        FetchContent_Declare(
+            lz4
+            GIT_REPOSITORY https://github.com/lz4/lz4.git
+            GIT_TAG 5b138c01b4644c133e556d96ad6105d24c401cac)
+
+        FetchContent_GetProperties(lz4)
+        if (NOT lz4_POPULATED)
+            FetchContent_Populate(lz4)
+            target_include_directories(${PROJECT_NAME} PUBLIC
+                ${lz4_SOURCE_DIR}/lib)
+            add_subdirectory(
+                ${lz4_SOURCE_DIR}/build/cmake # The lz4 CMakeLists.txt
+                ${lz4_BINARY_DIR}
+                EXCLUDE_FROM_ALL)
+        endif ()
+
+        target_link_libraries(${PROJECT_NAME} lz4_static)
+    endif ()
+endif ()
+
+# MariaDB TODO: FetchContent
 if (WIN32)
     set(MARIADB_PATH "C:\\Program Files\\MariaDB\\MariaDB C++ Connector 64-bit")
     if (NOT EXISTS ${MARIADB_PATH})

@@ -9,6 +9,11 @@ namespace events {
                 return;
             }
 
+            printf("%d\n", string.length());
+            if (string.length() <= 20) {
+                return;
+            }
+
             TextParse text_parse{ string };
             std::string text = text_parse.get("text", 1);
 

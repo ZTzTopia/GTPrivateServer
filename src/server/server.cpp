@@ -33,10 +33,10 @@ namespace server {
                 float min = packet_loss - packet_loss_variance;
                 float max = packet_loss + packet_loss_variance;
 
-                if (min < 0.1f && max > 0.1f) {
-                    spdlog::info("Client {} kicked for packet loss.", current_peer->connectID);
+                if (min < 0.5f && max > 0.5f) {
+                    /*spdlog::info("Client {} kicked for packet loss.", current_peer->connectID);
                     enet_peer_disconnect_later(current_peer, 0);
-                    return;
+                    return;*/
                 }
             }
         }

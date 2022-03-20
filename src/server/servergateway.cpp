@@ -2,6 +2,7 @@
 
 #include "servergateway.h"
 #include "serverpool.h"
+#include "../config.h"
 #include "../utils/textparse.h"
 
 namespace server {
@@ -71,7 +72,7 @@ namespace server {
                 server->get_port(),
                 -1,
                 static_cast<int32_t>(user_hash),
-                "127.0.0.1|",
+                fmt::format("{}|", config::address),
                 1
             });
             return;

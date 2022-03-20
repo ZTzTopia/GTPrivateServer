@@ -17,6 +17,7 @@ namespace events {
 
             TextParse text_parse{ string };
             std::string world_name = text_parse.get("name", 1);
+            std::transform(world_name.begin(), world_name.end(), world_name.begin(), ::toupper);
 
             uint32_t data_size;
             uint8_t *data = world_pool->get_world_data(world_name, &data_size);

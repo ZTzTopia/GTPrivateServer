@@ -3,7 +3,7 @@
 
 namespace config {
     constexpr auto debug = true;
-    constexpr std::string_view address = "127.0.0.1";
+    constexpr std::string_view address = "25.38.51.142";
 
     namespace server_gateway {
         constexpr auto count = 2;

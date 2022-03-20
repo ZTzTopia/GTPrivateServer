@@ -77,7 +77,7 @@ namespace http {
                 if (recv(new_sockfd, buffer, sizeof(buffer), 0) > 0) {
                     if (strstr(buffer, "/growtopia/server_data.php") != nullptr) {
                         std::string http_body{
-                            "server|127.0.0.1\r\n"
+                            "server|25.38.51.142\r\n"
                             "port|"
                         };
 

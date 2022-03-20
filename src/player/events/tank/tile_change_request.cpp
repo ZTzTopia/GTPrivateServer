@@ -54,6 +54,13 @@ namespace events {
             }
 
             player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, game_update_packet);
+            world->send_to_all([player, game_update_packet](player::Player *other_player) {
+                if (other_player == player) {
+                    return;
+                }
+
+                other_player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, game_update_packet);
+            });
         });
     }
 }

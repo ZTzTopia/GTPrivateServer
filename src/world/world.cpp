@@ -1,9 +1,9 @@
 #include <iostream>
-#include <sstream>
 #include <utility>
 
 #include "world.h"
 #include "../mariadb/conn.h"
+#include "../proton/shared/util/ResourceUtils.h"
 #include "../utils/random.h"
 
 namespace world {
@@ -137,15 +137,23 @@ namespace world {
             }
         }
 
+        int compressed_size;
+        data = lz4CompressToMemory(data, static_cast<int>(mem_pos), &compressed_size);
+
         try {
-            sql::PreparedStatement *stmnt(mariadb::get_sql_connection()->prepareStatement("INSERT INTO worlds (name, width, height, data) VALUES (?, ?, ?, ?)"));
-            std::transform(m_name.begin(), m_name.end(), m_name.begin(), ::toupper);
+            sql::PreparedStatement *stmnt(mariadb::get_sql_connection()->prepareStatement(
+                "INSERT INTO worlds (name, width, height, decompressed_size_data, compressed_size_data, data) "
+                "VALUES (?, ?, ?, ?, ?, ?)"
+            ));
+
             stmnt->setString(1, m_name.c_str());
             stmnt->setUInt(2, width);
             stmnt->setUInt(3, height);
+            stmnt->setInt(4, static_cast<int>(mem_pos));
+            stmnt->setInt(5, compressed_size);
 
-            std::stringstream in(std::string{ reinterpret_cast<char *>(data), mem_pos });
-            stmnt->setBlob(4, &in);
+            std::stringstream in(std::string{ reinterpret_cast<char *>(data), static_cast<uint32_t>(compressed_size) });
+            stmnt->setBlob(6, &in);
 
             stmnt->executeQuery();
         }
@@ -155,7 +163,9 @@ namespace world {
     }
 
     bool World::load(const std::string &name) {
-        std::transform(m_name.begin(), m_name.end(), m_name.begin(), ::toupper);
+        if (!m_tiles.empty()) {
+            return true;
+        }
 
         try {
             sql::Statement *stmnt(mariadb::get_sql_connection()->createStatement());
@@ -166,7 +176,9 @@ namespace world {
                 // m_name = std::string{ res->getString(1).c_str() };
                 m_width = res->getUInt(2);
                 m_height = res->getUInt(3);
-                auto out = res->getBlob(4);
+                int decompressed_size_data = res->getInt(4);
+                int compressed_size_data = res->getInt(5);
+                auto out = res->getBlob(6);
 
                 std::streamoff begin = out->tellg();
                 out->seekg(0, std::istream::end);
@@ -174,8 +186,11 @@ namespace world {
                 out->seekg(0, std::istream::beg);
                 auto data_size = static_cast<uint32_t>(end - begin);
 
-                auto *data = new char[data_size];
+                auto *data = new char[decompressed_size_data];
                 out->read(reinterpret_cast<char *>(data), data_size);
+
+                data = (char*)lz4DecompressToMemory(reinterpret_cast<uint8_t *>(data), compressed_size_data, decompressed_size_data);
+
                 uint32_t mem_pos = 0;
 
                 m_tiles.reserve(m_width * m_height);

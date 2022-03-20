@@ -4,6 +4,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <mariadb/conncpp.hpp>
+#include <lz4.h>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -112,11 +113,12 @@ int main() {
     }
 
     // Growtopia error log about server:
-    // `4OOPS: ``Too many people logging in at once. Please click `5CANCEL ``and try again in a few seconds. (done)
-    // `4 SERVER OVERLOADED : ``Sorry, our servers are currently at max capacity with 80000 online, please try again later. We are working to improve this! (done)
-    // Server is currently initializing or re-syncing with sub-server. Please try again in a minute. (ok is server restart?) (done)
+    // `4OOPS: ``Too many people logging in at once. Please click `5CANCEL ``and try again in a few seconds. 
+    // `4 SERVER OVERLOADED : ``Sorry, our servers are currently at max capacity with 80000 online, please try again later. We are working to improve this! 
+    // Server is currently initializing or re-syncing with sub-server. Please try again in a minute. (ok is server restart?) 
     // Sub-server 1 is currently experiencing high load. Please try again in 30 seconds, hopefully load balancing will fix it.
     // The system is currently experiencing high loads and is not allowing server moves, please try again later.
+    // Sub-server 1 (where WORLD is located) is currently lagged out, please try again later.
 
     for (int i = 1; i < config::server_game::count; i++) {
         server::get_server_pool()->new_server(config::server_game::port + i + 1, config::server_game::max_peer);

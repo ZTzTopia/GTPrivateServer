@@ -1,10 +1,46 @@
 #include <cassert>
 #include <zlib.h>
+#include <lz4.h>
 
 #include "ResourceUtils.h"
 
 // You must SAFE_DELETE_ARRAY what it returns
-uint8_t* zlibDeflateToMemory(uint8_t* pInput, int sizeBytes, int* pSizeCompressedOut) {
+uint8_t *lz4CompressToMemory(uint8_t *pInput, int sizeBytes, int *pSizeCompressedOut) {
+    assert(sizeBytes > 0);
+    assert(pSizeCompressedOut != nullptr);
+
+    int compressedSize = LZ4_compressBound(sizeBytes);
+    auto *compressedData = new uint8_t[compressedSize];
+
+    int result = LZ4_compress_default((const char *)pInput, (char *)compressedData, sizeBytes, compressedSize);
+    if (result <= 0) {
+        delete[] compressedData;
+        return nullptr;
+    }
+
+    *pSizeCompressedOut = result;
+    return compressedData;
+}
+
+// You must SAFE_DELETE_ARRAY what it returns
+uint8_t *lz4DecompressToMemory(uint8_t *pInput, int compressedSize, int decompressedSize) {
+    assert(compressedSize > 0);
+    assert(decompressedSize > 0);
+
+    auto *pDestBuff = new uint8_t[decompressedSize + 1]; // Room for extra null at the end;
+	pDestBuff[decompressedSize] = 0; // Add the extra null, if we decompressed a text file this can be useful
+
+    int result = LZ4_decompress_safe((const char *)pInput, (char*)pDestBuff, compressedSize, decompressedSize);
+    if (result < 0 || result != decompressedSize) {
+        delete[] pDestBuff;
+        return nullptr;
+    }
+
+    return pDestBuff;
+}
+
+// You must SAFE_DELETE_ARRAY what it returns
+uint8_t *zlibDeflateToMemory(uint8_t *pInput, int sizeBytes, int *pSizeCompressedOut) {
 	z_stream strm;
 	int ret;
 
@@ -34,11 +70,10 @@ uint8_t* zlibDeflateToMemory(uint8_t* pInput, int sizeBytes, int* pSizeCompresse
 	deflateEnd(&strm);
 	*pSizeCompressedOut = (int)strm.total_out;
 	return pOut;
-
 }
 
 // You must SAFE_DELETE_ARRAY what it returns
-uint8_t* zLibInflateToMemory(uint8_t* pInput, unsigned int compressedSize, unsigned int decompressedSize) {
+uint8_t *zLibInflateToMemory(uint8_t *pInput, unsigned int compressedSize, unsigned int decompressedSize) {
 	int ret;
 	z_stream strm;
 
@@ -67,6 +102,5 @@ uint8_t* zLibInflateToMemory(uint8_t* pInput, unsigned int compressedSize, unsig
 	}
 
 	inflateEnd(&strm);
-
 	return pDestBuff;
 }
