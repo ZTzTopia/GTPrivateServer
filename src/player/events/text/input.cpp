@@ -16,10 +16,6 @@ namespace events {
                 return;
             }
 
-            if (std::all_of(text.begin(), text.end(), [](char c) { return std::isspace(c); })) {
-                return;
-            }
-
             auto *server = server::get_server_pool()->get_server(player->get_server_id());
             if (!server) {
                 return;
@@ -34,6 +30,14 @@ namespace events {
             if (!world) {
                 return;
             }
+
+            // https://stackoverflow.com/a/35301768/13257595
+            bool prev_is_space = true;
+            text.erase(std::remove_if(text.begin(), text.end(), [&prev_is_space](unsigned char curr) {
+                bool r = std::isspace(curr) && prev_is_space;
+                prev_is_space = std::isspace(curr);
+                return r;
+            }), text.end());
 
             world->send_to_all([player, text](player::Player *other_player) {
                 other_player->send_variant({
