@@ -83,11 +83,12 @@ namespace world {
             m_tiles.push_back(tile);
         }
 
-        save();
+        save(true);
+        m_last_tile_hash = std::hash<std::vector<Tile *>>{}(m_tiles);
     }
 
     void World::save(bool insert) {
-        if (std::hash<std::vector<Tile *>>{}(m_tiles) == m_last_tile_hash) {
+        if (!insert && std::hash<std::vector<Tile *>>{}(m_tiles) == m_last_tile_hash) {
             return;
         }
 
