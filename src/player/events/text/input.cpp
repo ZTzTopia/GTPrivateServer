@@ -9,15 +9,14 @@ namespace events {
                 return;
             }
 
-            printf("%d\n", string.length());
-            if (string.length() <= 20) {
-                return;
-            }
-
             TextParse text_parse{ string };
             std::string text = text_parse.get("text", 1);
 
             if (text.empty()) {
+                return;
+            }
+
+            if (std::all_of(text.begin(), text.end(), [](char c) { return std::isspace(c); })) {
                 return;
             }
 

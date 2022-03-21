@@ -11,8 +11,8 @@ namespace world {
 
     uint8_t *WorldPool::get_world_data(const std::string &world_name, uint32_t *data_size) {
         World *world = get_world(world_name);
-        if (world == nullptr) {
-             world = new_world(world_name);
+        if (!world) {
+            return nullptr;
         }
 
         uint8_t *data = world->serialize_to_mem(data_size, nullptr);
@@ -21,9 +21,6 @@ namespace world {
 
     World *WorldPool::new_world(const std::string &world_name) {
         auto world = new World{ world_name };
-        if (!world->load(world_name)) {
-            world->generate();
-        }
         add_world(world);
         return world;
     }
@@ -59,6 +56,22 @@ namespace world {
         }
 
         return nullptr;
+    }
+
+    World *WorldPool::get_world_or_generate(const std::string &world_name) {
+        World *world = get_world(world_name);
+
+        if (!world) {
+            world = new_world(world_name);
+        }
+
+        if (world && world->is_fresh_world()) {
+            if (!world->load()) {
+                world->generate();
+            }
+        }
+
+        return world;
     }
 
     std::vector<World *> WorldPool::get_worlds() {

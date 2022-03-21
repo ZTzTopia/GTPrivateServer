@@ -31,6 +31,7 @@ namespace player {
         std::string m_country;
         std::string m_current_world;
         uint32_t m_net_id;
+        CL_Vec2i m_pos;
 
     private:
         int m_server_id;

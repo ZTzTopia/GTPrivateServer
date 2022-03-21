@@ -3,7 +3,7 @@
 
 namespace config {
     constexpr auto debug = true;
-    constexpr std::string_view address = "25.38.51.142";
+    constexpr std::string_view address = "127.0.0.1";
 
     namespace server_gateway {
         constexpr auto count = 2;
@@ -41,7 +41,5 @@ namespace config {
 
     namespace data {
         constexpr std::string_view root = "./data/";
-        constexpr std::string_view player = "./data/player/";
-        constexpr std::string_view world = "./data/world/";
     }
 }

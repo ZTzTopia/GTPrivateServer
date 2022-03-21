@@ -18,6 +18,7 @@ namespace world {
         void remove_world(const std::string &world_name);
 
         World *get_world(const std::string &world_name);
+        World *get_world_or_generate(const std::string &world_name);
         std::vector<World *> get_worlds();
         size_t get_world_count();
 

@@ -1,9 +1,9 @@
-#include "state.h"
+#include "set_icon_state.h"
 #include "../../../server/serverpool.h"
 
 namespace events {
-    state::state(player::Player *player) {
-        player->load("gup_" + std::to_string(player::PACKET_STATE), [player](player::GameUpdatePacket *game_update_packet) {
+    set_icon_state::set_icon_state(player::Player *player) {
+        player->load("gup_" + std::to_string(player::PACKET_SET_ICON_STATE), [player](player::GameUpdatePacket *game_update_packet) {
             if (player->m_current_world == "EXIT") {
                 return;
             }
@@ -22,9 +22,6 @@ namespace events {
             if (!world) {
                 return;
             }
-
-            player->m_pos.x = static_cast<int>(game_update_packet->pos_x);
-            player->m_pos.y = static_cast<int>(game_update_packet->pos_y);
 
             game_update_packet->net_id = player->m_net_id;
             world->send_to_all([game_update_packet](player::Player *other_player) {

@@ -33,7 +33,8 @@ namespace events {
             player->m_current_world = "EXIT";
 
             if (world->get_players().size() == 1) {
-                // world_pool->remove_world(world);
+                world->save();
+                world_pool->remove_world(world);
                 return;
             }
 

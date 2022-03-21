@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include <assert.h>
+#include <cassert>
 #include <memory>
 #include <enet/enet.h>
 #include <spdlog/spdlog.h>
@@ -89,8 +89,12 @@ namespace player {
             uint32_t item_id;
             uint32_t tile_damage;
         };
-        float unk9; // 24
-        float unk10; // 28
+        union { // 24
+            float pos_x;
+        };
+        union { // 28
+            float pos_y;
+        };
         float unk11; // 32
         float unk12; // 36
         float unk13; // 40

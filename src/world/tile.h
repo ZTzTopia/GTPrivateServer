@@ -63,3 +63,24 @@ namespace world {
         std::string m_label;
     };
 }
+
+namespace std {
+    template<>
+    struct hash<vector<world::Tile *>> {
+        size_t operator()(const vector<world::Tile *> &tiles) const noexcept {
+            size_t seed = 0;
+            size_t ret;
+            for (auto &tile : tiles) {
+                ret = hash<uint16_t>()(tile->get_fg());
+                seed ^= ret + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                ret = hash<uint16_t>()(tile->get_bg());
+                seed ^= ret + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                ret = hash<uint16_t>()(tile->get_flags());
+                seed ^= ret + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                ret = hash<std::string>()(tile->get_label());
+                seed ^= ret + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            }
+            return seed;
+        }
+    };
+}

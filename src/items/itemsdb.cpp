@@ -80,14 +80,14 @@ namespace items {
         m_hash = hash_string(reinterpret_cast<const char *>(m_data), m_data_size);
         m_compressed_data = zlibDeflateToMemory(m_data, static_cast<int>(m_data_size), reinterpret_cast<int *>(&m_compressed_data_size));
 
-        spdlog::info("Items database hash: {}", m_hash);
-
         std::memcpy(&m_version, m_data, 2);
         uint32_t mem_pos = 2;
 
         if (m_version < 11 || m_version > 14) {
             return -1;
         }
+
+        spdlog::info("Items database hash: {}, version: {}", m_hash, m_version);
 
         std::memcpy(&m_item_count, m_data + mem_pos, 4);
         mem_pos += 4;
@@ -280,7 +280,7 @@ namespace items {
         }
 
         // We need the data??
-        delete m_data;
+        delete[] m_data;
         m_data = nullptr;
         return 0;
     }

@@ -28,39 +28,44 @@ namespace events {
                 return;
             }
 
-            if (tile->get_item_info()->id == 0) {
-                return;
-            }
+            switch (game_update_packet->item_id) {
+                case 18: {
+                    if (tile->get_item_info()->id == 0) {
+                        return;
+                    }
 
-            if (tile->get_item_info()->id == 8) {
-                player->send_packet(player::NET_MESSAGE_GAME_MESSAGE, "action|play_sfx\nfile|audio/cant_break_tile.wav\ndelayMS|0\n");
-                player->send_variant({ "OnTalkBubble", player->m_net_id, "It's too strong to break.", 0, 1 });
-                return;
-            }
+                    if (tile->get_item_info()->id == 6 || tile->get_item_info()->id == 8) {
+                        player->send_packet(player::NET_MESSAGE_GAME_MESSAGE, "action|play_sfx\nfile|audio/cant_break_tile.wav\ndelayMS|0\n");
+                        player->send_variant({
+                            "OnTalkBubble",
+                            player->m_net_id,
+                            "It's too strong to break.",
+                            0,
+                            1
+                        });
+                        return;
+                    }
 
-            tile->reset_hit_count_by_time();
+                    tile->reset_hit_count_by_time();
 
-            game_update_packet->packet_type = player::PACKET_TILE_APPLY_DAMAGE;
-            game_update_packet->net_id = player->m_net_id;
-            game_update_packet->tile_damage = 6;
+                    game_update_packet->packet_type = player::PACKET_TILE_APPLY_DAMAGE;
+                    game_update_packet->net_id = player->m_net_id;
+                    game_update_packet->tile_damage = 6;
 
-            // Dirt = 3 hit
-            // Lava = 4 hit
-            // Rock = 10 hit
-            if (tile->get_hit_count() > ((tile->get_item_info()->break_hits / 6) <= 4 ? tile->get_item_info()->break_hits / 8 : tile->get_item_info()->break_hits / 6.5)) {
-                game_update_packet->packet_type = player::PACKET_TILE_CHANGE_REQUEST;
-                game_update_packet->item_id = 18;
-                tile->remove_tile();
-            }
+                    // Dirt = 3 hit
+                    // Lava = 4 hit
+                    // Rock = 10 hit
+                    if (tile->get_hit_count() > ((tile->get_item_info()->break_hits / 6) <= 4 ? tile->get_item_info()->break_hits / 8 : tile->get_item_info()->break_hits / 6.5)) {
+                        game_update_packet->packet_type = player::PACKET_TILE_CHANGE_REQUEST;
+                        game_update_packet->item_id = 18;
+                        tile->remove_tile();
+                    }
 
-            player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, game_update_packet);
-            world->send_to_all([player, game_update_packet](player::Player *other_player) {
-                if (other_player == player) {
-                    return;
+                    world->send_to_all([player, game_update_packet](player::Player *other_player) {
+                        other_player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, game_update_packet);
+                    });
                 }
-
-                other_player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, game_update_packet);
-            });
+            }
         });
     }
 }

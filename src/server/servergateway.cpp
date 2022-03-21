@@ -1,6 +1,7 @@
 #include <spdlog/spdlog.h>
 
 #include "servergateway.h"
+#include "loadbalancing.h"
 #include "serverpool.h"
 #include "../config.h"
 #include "../utils/textparse.h"
@@ -56,29 +57,38 @@ namespace server {
             return;
         }
 
-        size_t peer_count = 0;
+        static LoadBalancing load_balancing{};
+        size_t total_count_peer = 0;
+
         for (auto &server: get_server_pool()->get_servers()) {
+            total_count_peer += server->get_peer_count();
             if (server->get_peer_count() >= server->get_max_peer()) {
-                peer_count += server->get_peer_count();
+                load_balancing.remove_server(server);
                 continue;
             }
 
+            load_balancing.add_server(server);
+        }
+
+        Server *best_server = load_balancing.get_server_with_minimum_player();
+        if (best_server) {
             TextParse text_parse{ player::get_text(packet) };
             size_t user_hash{ std::hash<std::string>{}(text_parse.get("requestedName", 1)) };
-            user_hash += server->get_port();
+            user_hash += best_server->get_port();
 
             player->send_variant({
                 "OnSendToServer",
-                server->get_port(),
+                best_server->get_port(),
                 -1,
                 static_cast<int32_t>(user_hash),
                 fmt::format("{}|", config::address),
                 1
             });
+
             return;
         }
 
-        player->send_log(fmt::format("`4 SERVER OVERLOADED : ``Sorry, our servers are currently at max capacity with {} online, please try again later. We are working to improve this!", peer_count));
+        player->send_log(fmt::format("`4 SERVER OVERLOADED : ``Sorry, our servers are currently at max capacity with {} online, please try again later. We are working to improve this!", total_count_peer));
         enet_peer_disconnect_later(peer, 0);
     }
 

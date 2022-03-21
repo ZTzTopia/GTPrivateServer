@@ -1,8 +1,10 @@
 #include "player.h"
 #include "eventmanager.h"
 
+#include "events/tank/set_icon_state.h"
 #include "events/tank/state.h"
 #include "events/tank/tile_change_request.h"
+
 #include "events/text/enter_game.h"
 #include "events/text/input.h"
 #include "events/text/join_request.h"
@@ -19,8 +21,10 @@ namespace player {
         peer->data = reinterpret_cast<void *>(&peer->connectID);
 
         // Memory leak or no? or it destroyed after Player is destroyed?
+        events::set_icon_state{ this };
         events::state{ this };
         events::tile_change_request{ this };
+
         events::enter_game{ this };
         events::input{ this };
         events::join_request{ this };

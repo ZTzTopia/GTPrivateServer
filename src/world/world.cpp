@@ -12,7 +12,8 @@ namespace world {
     // Dirt block break hit = 3
 
     World::World(std::string name)
-        : m_name(std::move(name))
+        : m_last_tile_hash(0)
+        , m_name(std::move(name))
         , m_width(100)
         , m_height(54)
         , m_total_net_id(0)
@@ -56,9 +57,6 @@ namespace world {
             if (i == 2400 + main_door_pos_x) {
                 tile->set_fg(6);
                 tile->set_label("EXIT");
-
-                m_white_door_pos.x = main_door_pos_x;
-                m_white_door_pos.y = static_cast<int>((i - main_door_pos_x) / width);
             }
             else if (i == 2500 + main_door_pos_x) {
                 tile->set_fg(8);
@@ -83,6 +81,14 @@ namespace world {
             }
 
             m_tiles.push_back(tile);
+        }
+
+        save();
+    }
+
+    void World::save(bool insert) {
+        if (std::hash<std::vector<Tile *>>{}(m_tiles) == m_last_tile_hash) {
+            return;
         }
 
         uint32_t mem_need = 0;
@@ -143,17 +149,32 @@ namespace world {
         try {
             sqlpp::mysql::connection *db = database::get_database()->get_connection();
 
+            auto now = sqlpp::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
             std::vector<uint8_t> data_vector(data, data + compressed_size);
-
-            const auto worlds = Worlds{};
-            (*db)(insert_into(worlds).set(
-                worlds.name = m_name,
-                worlds.width = width,
-                worlds.height = height,
-                worlds.decompressed_size_data = mem_pos,
-                worlds.compressed_size_data = compressed_size,
-                worlds.data = data_vector
-            ));
+            
+            const auto worlds = database::Worlds{};
+            if (insert) {
+                (*db)(insert_into(worlds).set(
+                    worlds.name = m_name,
+                    worlds.created_at = now,
+                    worlds.updated_at = now,
+                    worlds.width = m_width,
+                    worlds.height = m_height,
+                    worlds.decompressed_size_data = mem_pos,
+                    worlds.compressed_size_data = compressed_size,
+                    worlds.data = data_vector
+                ));
+            }
+            else {
+                (*db)(update(worlds).set(
+                    worlds.width = m_width,
+                    worlds.updated_at = now,
+                    worlds.height = m_height,
+                    worlds.decompressed_size_data = mem_pos,
+                    worlds.compressed_size_data = compressed_size,
+                    worlds.data = data_vector
+                ).where(worlds.name == m_name));
+            }
         }
         catch(const std::exception &e) {
             spdlog::error("Error inserting new world: {}", e.what());
@@ -162,7 +183,7 @@ namespace world {
         delete[] data;
     }
 
-    bool World::load(const std::string &name) {
+    bool World::load() {
         if (!m_tiles.empty()) {
             return true;
         }
@@ -170,7 +191,7 @@ namespace world {
         try {
             sqlpp::mysql::connection *db = database::get_database()->get_connection();
 
-            Worlds worlds{};
+            database::Worlds worlds{};
             for (const auto &row : (*db)(select(all_of(worlds)).from(worlds).where(worlds.name == m_name))) {
                 if (row._is_valid) {
                     uint8_t *data = brotliDecompressToMemory((uint8_t *)row.data.blob, static_cast<int>(row.compressed_size_data), static_cast<int>(row.decompressed_size_data));
@@ -226,6 +247,9 @@ namespace world {
 
                         m_tiles.push_back(tile);
                     }
+
+
+                    m_last_tile_hash = std::hash<std::vector<Tile *>>{}(m_tiles);
 
                     delete[] data;
                     return true;
@@ -328,7 +352,7 @@ namespace world {
         return dest;
     }
 
-    Tile *World::get_tile(int x, int y) {
+    Tile *World::get_tile(uint16_t x, uint16_t y) {
         if (x < 0 || y < 0 || x > 100 || y > 60) {
             return nullptr;
         }

@@ -76,20 +76,20 @@ namespace http {
                 char buffer[1024];
                 if (recv(new_sockfd, buffer, sizeof(buffer), 0) > 0) {
                     if (strstr(buffer, "/growtopia/server_data.php") != nullptr) {
+                        std::string address = std::string{ config::address };
                         std::string http_body{
-                            "server|25.38.51.142\r\n"
-                            "port|"
+                            fmt::format(
+                                "server|{}\r\n"
+                                "port|{}\r\n"
+                                "type|1\r\n"
+                                "#maint|Server is under maintenance. We will be back online shortly. Thank you for your patience!\r\n"
+                                "type2|1\r\n" // Tell client to use new packet.
+                                "meta|defined\r\n"
+                                "RTENDMARKERBS1001",
+                                address,
+                                server_gateway_port + random::get_generator_static().uniform<enet_uint16>(static_cast<uint8_t>(0), server_gateway_count - 1)
+                            )
                         };
-
-                        http_body.append(std::to_string(server_gateway_port + random::get_generator_static().uniform<enet_uint16>(static_cast<uint8_t>(0), server_gateway_count - 1)));
-                        http_body.append("\r\n");
-                        http_body.append(
-                            "type|1\r\n"
-                            "#maint|Server is under maintenance. We will be back online shortly. Thank you for your patience!\r\n"
-                            "type2|1\r\n" // Tell client to use new packet.
-                            "meta|defined\r\n"
-                            "RTENDMARKERBS1001"
-                        );
 
                         std::string http_header{
                             "HTTP/1.0 200 OK\r\n"

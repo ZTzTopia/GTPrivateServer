@@ -16,15 +16,13 @@
 #include "spdlog/sinks/rotating_file_sink.h"
 
 static std::atomic<bool> running{ true };
+static std::function<void()> shutdown_callback;
 
 int main() {
 #ifndef _WIN32
     std::cout << "Other platforms not tested." << std::endl;
     return EXIT_FAILURE;
 #endif
-
-    // ==================================================================================================
-    // spd log
 
     std::vector<spdlog::sink_ptr> sinks;
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
@@ -37,13 +35,10 @@ int main() {
 
     spdlog::info("Growtopia Private Server.");
 
-    // ==================================================================================================
-    // Signal handler
-
     const auto signal_handler{
         [](int sig) {
             spdlog::info("Received signal {}. Exiting.", sig);
-            running.store(false);
+            shutdown_callback();
 
             if (sig != SIGINT) {
                 backward::TraceResolver tr;
@@ -70,9 +65,6 @@ int main() {
     std::signal(SIGBUS, signal_handler);
 #endif
 
-    // ==================================================================================================
-    // Exit thread
-
     std::thread exit_thread{
         [] {
             std::string command;
@@ -85,21 +77,12 @@ int main() {
         }
     };
 
-    // ==================================================================================================
-    // Database
-
     database::get_database()->connect();
-
-    // ==================================================================================================
-    // Item database
 
     if (items::get_items_db()->init() != 0) {
         spdlog::error("Failed to load items database.");
         return EXIT_FAILURE;
     }
-
-    // ==================================================================================================
-    // Server gateway + Sub server
 
     if (enetwrapper::ENetServer::one_time_init() != 0) {
         spdlog::error("Failed to initialize ENet.");
@@ -128,44 +111,37 @@ int main() {
      */
 
     for (int i = 1; i < config::server_game::count; i++) {
-        server::get_server_pool()->new_server(config::server_game::port + i + 1, config::server_game::max_peer);
+        server::get_server_pool()->new_server(config::server_game::port + i, config::server_game::max_peer);
         server::get_server_pool()->start();
     }
 
-    // ==================================================================================================
-    // HTTP server data
-
     std::thread http{ http::HTTP::create_server_data, std::ref(running), config::server_gateway::port, config::server_gateway::count };
 
-    // ==================================================================================================
-    // Main loop
+    shutdown_callback = [servers_gateway, &exit_thread, &http]{
+        spdlog::info("Shutting down..");
+
+        delete database::get_database();
+
+        if (items::get_items_db()) {
+            delete items::get_items_db();
+        }
+
+        for (auto &server_gateway : servers_gateway) {
+            delete server_gateway;
+        }
+
+        if (server::get_server_pool()) {
+            delete server::get_server_pool();
+        }
+
+        exit_thread.join();
+        http.join();
+    };
 
     while (running.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    // ==================================================================================================
-    // Cleanup
-
-    spdlog::info("Cleaning up..");
-
-    // TODO: Move cleanup to signal handler.
-    delete database::get_database();
-
-    if (items::get_items_db()) {
-        delete items::get_items_db();
-    }
-
-    for (auto &server_gateway : servers_gateway) {
-        delete server_gateway;
-    }
-
-    if (server::get_server_pool()) {
-        delete server::get_server_pool();
-    }
-
-    exit_thread.join();
-    http.join();
-
+    shutdown_callback();
     return EXIT_SUCCESS;
 }

@@ -25,12 +25,17 @@ public:
     // Make it short and readable.
     static std::vector<std::string> string_tokenize(const std::string &str, const std::string &delimiters) {
         std::vector<std::string> tokens;
-        std::string::size_type lastPos = str.find_first_not_of(delimiters, 0);
-        std::string::size_type pos = str.find_first_of(delimiters, lastPos);
-        while (std::string::npos != pos || std::string::npos != lastPos) {
-            tokens.push_back(str.substr(lastPos, pos - lastPos));
-            lastPos = str.find_first_not_of(delimiters, pos);
-            pos = str.find_first_of(delimiters, lastPos);
+        size_t start = 0, end;
+        while ((end = str.find_first_of(delimiters, start)) != std::string::npos) {
+            if (end != start) {
+                tokens.push_back(str.substr(start, end - start));
+            }
+
+            start = end + 1;
+        }
+
+        if (start < str.length()) {
+            tokens.push_back(str.substr(start));
         }
 
         return tokens;
@@ -48,6 +53,10 @@ public:
 
             std::vector<std::string> data = string_tokenize(m_data[i], token);
             if (data[0] == key) {
+                if (index < 0 && i + index > m_data.size()) {
+                    return "";
+                }
+
                 // Found it.
                 return data[index];
             }
