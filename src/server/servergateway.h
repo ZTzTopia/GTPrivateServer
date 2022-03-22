@@ -5,8 +5,10 @@
 namespace server {
     class ServerGateway : public enetwrapper::ENetServer {
     public:
-        ServerGateway(enet_uint16 port, size_t max_peer);
+        ServerGateway();
         ~ServerGateway() = default;
+
+        bool initialize(enet_uint16 port, size_t max_peer);
 
         void on_connect(ENetPeer *peer) override;
         void on_receive(ENetPeer *peer, ENetPacket *packet) override;

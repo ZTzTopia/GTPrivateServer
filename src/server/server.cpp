@@ -3,17 +3,22 @@
 #include "server.h"
 
 namespace server {
-    Server::Server(int server_id, enet_uint16 port, size_t max_peer) : m_server_id(server_id) {
-        if (create_host(port, max_peer) != 0) {
+    Server::Server(int server_id)
+        : m_server_id(server_id)
+        , m_player_pool(nullptr)
+        , m_world_pool(nullptr) {}
+
+    bool Server::initialize(enet_uint16 port, size_t max_peer) {
+        if (!create_host(port, max_peer)) {
             spdlog::error("Server with port {} failed to start.", port);
-            delete this;
-            return;
+            return false;
         }
 
         start_service();
 
         m_player_pool = new player::PlayerPool{};
         m_world_pool = new world::WorldPool{};
+        return true;
     }
 
     void Server::on_update() {
@@ -45,7 +50,12 @@ namespace server {
     void Server::on_connect(ENetPeer *peer) {
         spdlog::info("Client connected. (id: {})", peer->connectID);
 
-        player::Player *player = m_player_pool->new_player(m_server_id, peer);
+        player::Player *player = m_player_pool->get_player(peer->connectID); // If send on to server
+        if (!player) {
+            spdlog::debug("asda");
+            player = m_player_pool->new_player(m_server_id, peer);
+        }
+
         player->send_packet(player::NET_MESSAGE_SERVER_HELLO, "");
     }
 
@@ -53,6 +63,11 @@ namespace server {
         player::Player *player = m_player_pool->get_player(peer->connectID);
         if (!player) {
             enet_peer_disconnect_now(peer, 0);
+            return;
+        }
+
+        if (player->m_on_send_to_server) {
+            m_player_pool->remove_player(player);
             return;
         }
 

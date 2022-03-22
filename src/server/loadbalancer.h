@@ -4,10 +4,10 @@
 #include "server.h"
 
 namespace server {
-    class LoadBalancing {
+    class LoadBalancer {
     public:
-        LoadBalancing() = default;
-        ~LoadBalancing() {
+        LoadBalancer() = default;
+        ~LoadBalancer() {
             m_servers.clear();
         }
 

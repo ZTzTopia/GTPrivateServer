@@ -59,12 +59,12 @@ namespace items {
         return hash;
     }
 
-    int ItemsDB::init() {
+    bool ItemsDB::initialize() {
         spdlog::info("Loading items database..");
 
         std::ifstream file(fmt::format("{}/items.dat", config::data::root), std::ifstream::in | std::ifstream::binary);
         if (!file.is_open()) {
-            return -1;
+            return false;
         }
 
         std::streamoff begin = file.tellg();
@@ -84,7 +84,7 @@ namespace items {
         uint32_t mem_pos = 2;
 
         if (m_version < 11 || m_version > 14) {
-            return -1;
+            return false;
         }
 
         spdlog::info("Items database hash: {}, version: {}", m_hash, m_version);
@@ -282,6 +282,6 @@ namespace items {
         // We need the data??
         delete[] m_data;
         m_data = nullptr;
-        return 0;
+        return true;
     }
 }

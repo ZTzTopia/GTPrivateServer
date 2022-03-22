@@ -22,18 +22,18 @@ namespace enetwrapper {
         }
     }
 
-    int ENetServer::one_time_init() {
+    bool ENetServer::one_time_init() {
 #ifdef _WIN32
         if (enet_initialize() != 0) {
-            return -1;
+            return false;
         }
 
         atexit(enet_deinitialize);
 #endif
-        return 0;
+        return true;
     }
 
-    int ENetServer::create_host(enet_uint16 port, size_t peer_count) {
+    bool ENetServer::create_host(enet_uint16 port, size_t peer_count) {
         if (m_host) {
 			enet_host_destroy(m_host);
 			m_host = nullptr;
@@ -45,7 +45,7 @@ namespace enetwrapper {
 
         m_host = enet_host_create(&address, peer_count, 2, 0, 0);
         if (m_host == nullptr) {
-            return -1;
+            return false;
         }
 
         m_host->checksum = enet_crc32;
@@ -53,10 +53,10 @@ namespace enetwrapper {
         // m_host->usingNewPacket = 1;
         m_host->usingNewPacketForServer = 1;
 		if (enet_host_compress_with_range_coder(m_host) != 0) {
-			return -2;
+			return false;
 		}
 
-        return 0;
+        return true;
     }
 
     void ENetServer::start_service() {

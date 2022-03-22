@@ -10,9 +10,9 @@ namespace enetwrapper {
         ENetServer();
         ~ENetServer();
 
-        static int one_time_init();
+        static bool one_time_init();
 
-        int create_host(enet_uint16 port, size_t peer_count);
+        bool create_host(enet_uint16 port, size_t peer_count);
 
         void start_service();
         void service_thread();

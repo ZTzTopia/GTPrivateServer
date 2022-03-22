@@ -23,8 +23,8 @@ namespace events {
                 return;
             }
 
-            player->m_pos.x = static_cast<int>(game_update_packet->pos_x);
-            player->m_pos.y = static_cast<int>(game_update_packet->pos_y);
+            player->m_pos.x = game_update_packet->pos_x;
+            player->m_pos.y = game_update_packet->pos_y;
 
             game_update_packet->net_id = player->m_net_id;
             world->send_to_all([game_update_packet](player::Player *other_player) {

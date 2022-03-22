@@ -8,13 +8,10 @@
 namespace server {
     class ServerPool {
     public:
-        ServerPool();
+        ServerPool() = default;
         ~ServerPool();
 
-        void start();
-        void pool_thread();
-
-        void new_server(enet_uint16 port, size_t max_peer);
+        bool new_server(enet_uint16 port, size_t max_peer);
         void add_server(Server *server);
         void remove_server(Server *server);
         void remove_server(int index);
@@ -25,8 +22,6 @@ namespace server {
 
     private:
         std::vector<Server *> m_servers;
-        std::thread m_pool_thread;
-        std::atomic<bool> m_running;
     };
 
     inline ServerPool *get_server_pool() {

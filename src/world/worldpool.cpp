@@ -74,6 +74,10 @@ namespace world {
         return world;
     }
 
+    bool WorldPool::is_world_loaded(const std::string &world_name) {
+        return get_world(world_name) != nullptr;
+    }
+
     std::vector<World *> WorldPool::get_worlds() {
         return m_worlds;
     }

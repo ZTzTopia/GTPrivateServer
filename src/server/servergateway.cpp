@@ -1,22 +1,25 @@
+#include <stdlib.h>
 #include <spdlog/spdlog.h>
 
 #include "servergateway.h"
-#include "loadbalancing.h"
+#include "loadbalancer.h"
 #include "serverpool.h"
 #include "../config.h"
 #include "../utils/textparse.h"
 
 namespace server {
-    ServerGateway::ServerGateway(enet_uint16 port, size_t max_peer) {
-        if (create_host(port, max_peer) != 0) {
-            spdlog::error("Server with port {} failed to start.", port);
-            delete this;
-            return;
+    ServerGateway::ServerGateway() : m_player_pool(nullptr) {}
+
+    bool ServerGateway::initialize(enet_uint16 port, size_t max_peer) {
+        if (!create_host(port, max_peer)) {
+            spdlog::error("Server gateway with port {} failed to start.", port);
+            return false;
         }
 
         start_service();
 
         m_player_pool = new player::PlayerPool{};
+        return true;
     }
 
     void ServerGateway::on_connect(ENetPeer *peer) {
@@ -57,24 +60,35 @@ namespace server {
             return;
         }
 
-        static LoadBalancing load_balancing{};
+#ifndef _WIN32
+        double load_avg[3];
+        getloadavg(load_avg, 3);
+        if (load_avg[0] >= 40.0) {
+            player->send_log("The system is currently experiencing high loads and is not allowing server moves, please try again later.");
+            return;
+        }
+#endif
+
+        static LoadBalancer load_balancer{};
         size_t total_count_peer = 0;
 
-        for (auto &server: get_server_pool()->get_servers()) {
+        for (auto &server : get_server_pool()->get_servers()) {
             total_count_peer += server->get_peer_count();
             if (server->get_peer_count() >= server->get_max_peer()) {
-                load_balancing.remove_server(server);
+                load_balancer.remove_server(server);
                 continue;
             }
 
-            load_balancing.add_server(server);
+            load_balancer.add_server(server);
         }
 
-        Server *best_server = load_balancing.get_server_with_minimum_player();
+        Server *best_server = load_balancer.get_server_with_minimum_player();
         if (best_server) {
             TextParse text_parse{ player::get_text(packet) };
             size_t user_hash{ std::hash<std::string>{}(text_parse.get("requestedName", 1)) };
             user_hash += best_server->get_port();
+
+            spdlog::info("User {} is connecting to server {}.", user_hash, best_server->get_port());
 
             player->send_variant({
                 "OnSendToServer",

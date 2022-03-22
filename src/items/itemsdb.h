@@ -9,7 +9,7 @@ namespace items {
         ItemsDB();
         ~ItemsDB();
 
-        int init();
+        bool initialize();
 
         [[nodiscard]] ItemInfo* get_item_info(uint16_t id) const { return m_items[id]; }
 

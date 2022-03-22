@@ -13,12 +13,15 @@
 #include "events/text/refresh_item_data.h"
 #include "events/text/requestedName.h"
 
+#include "../database/database.h"
+
 namespace player {
     Player::Player(int server_id, ENetPeer *peer)
         : EventManager()
+        , m_on_send_to_server(false)
         , m_server_id(server_id)
         , m_peer(peer) {
-        peer->data = reinterpret_cast<void *>(&peer->connectID);
+        peer->data = reinterpret_cast<void *>(peer->connectID);
 
         // Memory leak or no? or it destroyed after Player is destroyed?
         events::set_icon_state{ this };
@@ -32,6 +35,58 @@ namespace player {
         events::quit_to_exit{ this };
         events::refresh_item_data{ this };
         events::requestedName{ this };
+    }
+
+    Player::~Player() {
+        save();
+    }
+
+    size_t Player::save(size_t token, bool insert) const {
+        try {
+            sqlpp::mysql::connection *db = database::get_database()->get_connection();
+
+            database::Guests guests{};
+            if (insert) {
+                auto id = (*db)(insert_into(guests).set(
+                    guests.name = m_raw_name,
+                    guests.mac = m_mac,
+                    guests.token = -1,
+                    guests.current_world = m_current_world
+                ));
+                return id;
+            }
+            else {
+                (*db)(update(guests).set(
+                    guests.token = -1,
+                    guests.current_world = m_current_world
+                ).where(guests.id == m_user_id));
+                return -1;
+            }
+        }
+        catch(const std::exception &e) {
+            spdlog::error("Error inserting new guest: {}", e.what());
+        }
+    }
+
+    bool Player::load_() {
+        try {
+            sqlpp::mysql::connection *db = database::get_database()->get_connection();
+
+            database::Guests guests{};
+            for (const auto &row : (*db)(select(all_of(guests)).from(guests).where(guests.name == m_raw_name and guests.mac == m_mac))) {
+                if (row._is_valid) {
+                    m_user_id = row.id;
+                    m_token = row.token;
+                    m_current_world = row.current_world;
+                    return true;
+                }
+            }
+        }
+        catch(const std::exception &e) {
+            spdlog::error("Error selecting new guest: {}", e.what());
+        }
+
+        return false;
     }
 
     void Player::process_generic_text_or_game_message(const std::string &text) {

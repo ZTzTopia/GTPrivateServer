@@ -5,12 +5,14 @@
 #include <sqlpp11/mysql/mysql.h>
 
 #include "../config.h"
+#include "worlds.h"
+#include "guests.h"
 
 namespace database {
     class Database {
     public:
-        Database() : db_connection(nullptr) { sqlpp::mysql::global_library_init(); }
-        ~Database() { delete db_connection; }
+        Database() : m_db_connection(nullptr) { sqlpp::mysql::global_library_init(); }
+        ~Database() { delete m_db_connection; }
 
         bool connect() {
             auto config = std::make_shared<sqlpp::mysql::connection_config>();
@@ -23,7 +25,7 @@ namespace database {
             config->debug = config::database::debug;
 
             try {
-                db_connection = new sqlpp::mysql::connection{ config };
+                m_db_connection = new sqlpp::mysql::connection{ config };
             }
             catch (const sqlpp::exception &e) {
                 spdlog::error("{}", e.what());
@@ -33,10 +35,10 @@ namespace database {
             return true;
         }
 
-        sqlpp::mysql::connection *get_connection() { return db_connection; }
+        sqlpp::mysql::connection *get_connection() { return m_db_connection; }
 
     private:
-        sqlpp::mysql::connection *db_connection;
+        sqlpp::mysql::connection *m_db_connection;
     };
 
     inline Database *get_database() {

@@ -1,16 +1,7 @@
 #include "serverpool.h"
 
 namespace server {
-    ServerPool::ServerPool() {
-        m_running.store(false);
-    }
-
     ServerPool::~ServerPool() {
-        if (m_running.load()) {
-            m_running.store(false);
-            m_pool_thread.join();
-        }
-
         for (auto &server : m_servers) {
             delete server;
         }
@@ -18,34 +9,17 @@ namespace server {
         m_servers.clear();
     }
 
-    void ServerPool::start() {
-        if (m_running.load()) {
-            return;
-        }
-
-        m_running.store(true);
-        std::thread thread{ &ServerPool::pool_thread, this };
-        m_pool_thread = std::move(thread);
-    }
-
-    void ServerPool::pool_thread() {
-        while (m_running.load()) {
-            for (auto &server: m_servers) {
-                server->on_update();
-            }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        }
-    }
-
-    void ServerPool::new_server(enet_uint16 port, size_t max_peer) {
+    bool ServerPool::new_server(enet_uint16 port, size_t max_peer) {
         static int server_id{ 0 };
-        auto *server = new Server{
-            server_id++,
-            port,
-            max_peer
-        };
+        auto *server = new Server{ server_id++ };
+
+        if (!server->initialize(port, max_peer)) {
+            delete server;
+            return false;
+        }
+
         add_server(server);
+        return true;
     }
 
     void ServerPool::add_server(Server *server) {

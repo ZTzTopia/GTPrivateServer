@@ -10,7 +10,10 @@ namespace player {
     class Player : public EventManager {
     public:
         Player(int server_id, ENetPeer *peer);
-        ~Player() = default;
+        ~Player();
+
+        size_t save(size_t token = -1, bool insert = false) const;
+        bool load_();
 
         void process_generic_text_or_game_message(const std::string &text);
         void process_game_packet(GameUpdatePacket *game_update_packet);
@@ -25,13 +28,17 @@ namespace player {
         [[nodiscard]] ENetPeer *get_peer() const { return m_peer; }
 
     public:
+        bool m_on_send_to_server;
+
+        size_t m_token;
         uint64_t m_user_id;
         std::string m_raw_name;
+        std::string m_mac;
         std::string m_display_name;
         std::string m_country;
         std::string m_current_world;
         uint32_t m_net_id;
-        CL_Vec2i m_pos;
+        CL_Vec2f m_pos;
 
     private:
         int m_server_id;

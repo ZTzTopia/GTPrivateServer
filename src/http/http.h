@@ -7,11 +7,11 @@
 
 #include "../utils/random.h"
 
-namespace http {
 #ifndef _WIN32
 #define INVALID_SOCKET -1
 #endif
 
+namespace http {
     class HTTP {
     public:
         HTTP() = default;
