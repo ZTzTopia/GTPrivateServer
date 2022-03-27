@@ -16,23 +16,18 @@ namespace cluster {
         : m_loop(loop)
     {
         if (is_worker()) {
-            auto pipe_handle = m_loop->resource<uvw::PipeHandle>();
+            auto pipe_handle = m_loop->resource<uvw::PipeHandle>(true);
             pipe_handle->init();
-            // pipe_handle->open(0);
+            pipe_handle->open(0);
 
-            pipe_handle->on<uvw::ErrorEvent>([](const auto &, auto &) {
-                std::cout << "pipe error" << std::endl;
+            pipe_handle->on<uvw::ErrorEvent>([this](const auto &, auto &) {
+                emit("error", std::string{ "Client pipe error." });
             });
 
-            pipe_handle->once<uvw::WriteEvent>([](const uvw::WriteEvent &, uvw::PipeHandle &handle) {
-                handle.close();
-            });
+            pipe_handle->read();
 
-            pipe_handle->once<uvw::ConnectEvent>([](const uvw::ConnectEvent &, uvw::PipeHandle &handle) {
-                std::string msg{ "online" };
-                handle.write((char *)msg.c_str(), msg.length());
-            });
-            pipe_handle->connect(sockname);
+            std::string msg{ "online" };
+            pipe_handle->write((char *)msg.c_str(), msg.length());
         }
     }
 
@@ -57,24 +52,20 @@ namespace cluster {
         }
 
         auto process_handle = m_loop->resource<uvw::ProcessHandle>();
+        process_handle->on<uvw::ErrorEvent>([this, process_handle](const uvw::ErrorEvent &error_event, auto &) {
+            emit("error", std::string{ error_event.what() });
+        });
+
         process_handle->on<uvw::ExitEvent>([this, process_handle](const uvw::ExitEvent &exit_event, uvw::ProcessHandle &handle) {
             emit("exit", process_handle, exit_event.status, exit_event.signal);
         });
 
-        auto pipe_handle = m_loop->resource<uvw::PipeHandle>();
+        auto pipe_handle = m_loop->resource<uvw::PipeHandle>(true);
         pipe_handle->init();
-        pipe_handle->on<uvw::ErrorEvent>([](const auto &, auto &) {
-            std::cout << "pipe error" << std::endl;
-        });
 
-        // This not working :(
-        // process_handle->stdio(*pipe_handle, uvw::Flags<uvw::ProcessHandle::StdIO>::from<uvw::ProcessHandle::StdIO::CREATE_PIPE, uvw::ProcessHandle::StdIO::READABLE_PIPE, uvw::ProcessHandle::StdIO::WRITABLE_PIPE>());
-
-        process_handle->stdio(uvw::StdIN, uvw::ProcessHandle::StdIO::IGNORE_STREAM);
-        process_handle->stdio(uvw::StdOUT, uvw::ProcessHandle::StdIO::IGNORE_STREAM);
-        process_handle->stdio(uvw::StdOUT, uvw::ProcessHandle::StdIO::INHERIT_FD);
-        process_handle->stdio(uvw::StdERR, uvw::ProcessHandle::StdIO::IGNORE_STREAM);
-        process_handle->stdio(uvw::StdERR, uvw::ProcessHandle::StdIO::INHERIT_FD);
+        // The error because uvw dev insert the poStreamStdio to the end of poStdio. Why not use the same variable?
+        process_handle->disableStdIOInheritance();
+        process_handle->stdio(*pipe_handle, uvw::Flags<uvw::ProcessHandle::StdIO>::from<uvw::ProcessHandle::StdIO::CREATE_PIPE, uvw::ProcessHandle::StdIO::READABLE_PIPE, uvw::ProcessHandle::StdIO::WRITABLE_PIPE>());
 
         char *args[3];
         args[0] = program_name;
@@ -87,31 +78,28 @@ namespace cluster {
 
         process_handle->spawn(args[0], args, env);
 
-        pipe_handle->once<uvw::ListenEvent>([this, process_handle](const uvw::ListenEvent &, uvw::PipeHandle &handle) {
-            std::shared_ptr<uvw::PipeHandle> socket = handle.loop().resource<uvw::PipeHandle>();
-
-            socket->on<uvw::EndEvent>([this, process_handle](const uvw::EndEvent &, uvw::PipeHandle &sock) {
-                emit("disconnect", process_handle);
-                sock.close();
-            });
-
-            socket->on<uvw::DataEvent>([this, process_handle](const uvw::DataEvent &data_event, uvw::PipeHandle &socket) {
-                std::string data(data_event.data.get(), data_event.length);
-                if (data == "online") {
-                    emit("online", process_handle);
-                    socket.close();
-                    return;
-                }
-
-                emit("message", process_handle, data);
-                socket.close();
-            });
-
-            handle.accept(*socket);
-            socket->read();
+        pipe_handle->on<uvw::ErrorEvent>([this](const uvw::ErrorEvent &error_event, auto &) {
+            emit("error", std::string{ error_event.what() });
         });
-        pipe_handle->bind(sockname);
-        pipe_handle->listen();
+
+        pipe_handle->on<uvw::EndEvent>([this, process_handle](const uvw::EndEvent &, uvw::PipeHandle &sock) {
+            emit("disconnect", process_handle);
+            sock.close();
+        });
+
+        pipe_handle->on<uvw::DataEvent>([this, process_handle](const uvw::DataEvent &data_event, uvw::PipeHandle &socket) {
+            std::string data(data_event.data.get(), data_event.length);
+            if (data == "online") {
+                emit("online", process_handle);
+                socket.close();
+                return;
+            }
+
+            emit("message", process_handle, data);
+            socket.close();
+        });
+
+        pipe_handle->read();
 
         emit("fork", process_handle);
 

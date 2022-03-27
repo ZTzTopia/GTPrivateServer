@@ -8,6 +8,7 @@
 #include <uvw/loop.h>
 #include <uvw/signal.h>
 #include <uvw/thread.h>
+#include <uvw/util.h>
 
 #include "config.h"
 #include "cluster/cluster.h"
@@ -29,38 +30,48 @@ int main(int argc, char *argv[]) {
 
     auto loop = uvw::Loop::getDefault();
 
-    cluster::Cluster cluster{ loop };
-    if (cluster.is_primary()) {
-        std::cout << "I am the primary." << std::endl;
-        std::cout << "Worker ProcessID: " << cluster.fork(argv[0]) << std::endl;
-
-        cluster.on("online", [](const std::shared_ptr<uvw::ProcessHandle> &process_handle) {
-            std::cout << process_handle->pid() << " online!" << std::endl;
-            process_handle->kill(1);
-        });
-
-        cluster.on("disconnect", [](const std::shared_ptr<uvw::ProcessHandle> &process_handle, int64_t exit_status, int term_signal) {
-            std::cout << process_handle->pid() << " disconnected!" << std::endl;
-        });
-
-        cluster.on("exit", [](const std::shared_ptr<uvw::ProcessHandle> &process_handle, int64_t exit_status, int term_signal) {
-            std::cout << process_handle->pid() << " exit!" << std::endl;
-        });
-
-        loop->run();
-        return 0;
-    }
-
-    std::cout << "I am a worker." << std::endl;
-
     std::vector<spdlog::sink_ptr> sinks;
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
-    sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>("server.log", 1024 * 1024, 8));
+    sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>("server.log", 1024 * 1024, 8)); // Using the port??
     auto logger = std::make_shared<spdlog::logger>("server", sinks.begin(), sinks.end());
     logger->set_pattern("[%Y-%m-%dT%TZ] [%n] [%^%l%$] [thread %t] %v");
     logger->set_level(config::debug ? spdlog::level::debug : spdlog::level::info);
     logger->flush_on(spdlog::level::debug);
     spdlog::set_default_logger(logger);
+
+    if (!config::dev) {
+        cluster::Cluster cluster{loop};
+        if (cluster.is_primary()) {
+            static uint8_t process_count = 0;
+            static const uint8_t cpu_count = uvw::Utilities::cpuInfo().size();
+
+            cluster.fork(argv[0]);
+
+            cluster.on("error", [](const std::string &error) {
+                spdlog::error("Primary error: {}", error);
+            });
+
+            cluster.on("online", [&cluster, argv](const std::shared_ptr<uvw::ProcessHandle> &process_handle) {
+                if (process_count >= cpu_count) {
+                    return;
+                }
+
+                process_count++;
+                cluster.fork(argv[0]);
+            });
+
+            cluster.on("exit", [&cluster, argv](const std::shared_ptr<uvw::ProcessHandle> &process_handle, int64_t exit_status, int term_signal) {
+                cluster.fork(argv[0]);
+            });
+
+            loop->run();
+            return EXIT_SUCCESS;
+        }
+
+        cluster.on("error", [](const std::string &error) {
+            spdlog::error("Worker error: {}", error);
+        });
+    }
 
     spdlog::info("Growtopia private server starting..");
 
@@ -83,7 +94,6 @@ int main(int argc, char *argv[]) {
         signal.stop();
         signal.close();
     });
-
 
     signal_handle->start(SIGINT);
 
