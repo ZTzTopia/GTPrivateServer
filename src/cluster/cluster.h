@@ -1,14 +1,14 @@
 #pragma once
 #include <string>
 #include <thread>
-#include <uv.h>
+#include <uvw/process.h>
 
 #include "eventemitter.h"
 
 namespace cluster {
     class Cluster : public EventEmitter {
     public:
-        explicit Cluster(uv_loop_t *loop);
+        explicit Cluster(std::shared_ptr<uvw::Loop> loop);
         ~Cluster() = default;
 
         [[nodiscard]] bool is_primary() const;
@@ -18,21 +18,7 @@ namespace cluster {
         int fork(char *program_name);
 
     private:
-        uv_loop_t *m_loop;
-
-        struct ChildWorker {
-            uv_process_t req;
-            uv_process_options_t options;
-            uv_pipe_t pipe;
-        } *workers;
-
-        std::vector<ChildWorker *> m_workers;
+        std::shared_ptr<uvw::Loop> m_loop;
+        std::vector<std::shared_ptr<uvw::ProcessHandle>> m_workers;
     };
-
-    static uv_loop_t *g_loop{ nullptr };
-    inline Cluster *get_cluster(uv_loop_t *loop) {
-        g_loop = loop;
-        static auto *database = new Cluster{ loop };
-        return database;
-    }
 }

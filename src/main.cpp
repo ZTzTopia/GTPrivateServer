@@ -21,34 +21,37 @@
 static std::atomic<bool> running{ true };
 static std::function<void()> shutdown_callback;
 
-/*int main(int argc, char *argv[]) {
-    uv_loop_t *loop = uv_default_loop();
-
-    if (cluster::get_cluster(loop)->is_primary()) {
-        std::cout << "I am the primary." << std::endl;
-        std::cout << "Worker ProcessID: " << cluster::get_cluster(loop)->fork(argv[0]) << std::endl;
-
-        cluster::get_cluster(loop)->on("data", [](std::string &data) {
-            std::cout << "Received data from worker: " << data<< std::endl;
-        });
-    }
-    else if (cluster::get_cluster(loop)->is_worker()) {
-        uv_sleep(1000);
-        std::cout << "I am a worker." << std::endl;
-    }
-
-    uv_run(loop, UV_RUN_DEFAULT);
-    uv_loop_close(loop);
-    return 0;
-}*/
-
 int main(int argc, char *argv[]) {
-#ifndef _WIN32
+#if (!defined(_WIN32) || defined(__MINGW32__)) && !defined(__linux__)
     std::cout << "Other platforms not tested." << std::endl;
     return EXIT_FAILURE;
 #endif
 
     auto loop = uvw::Loop::getDefault();
+
+    cluster::Cluster cluster{ loop };
+    if (cluster.is_primary()) {
+        std::cout << "I am the primary." << std::endl;
+        std::cout << "Worker ProcessID: " << cluster.fork(argv[0]) << std::endl;
+
+        cluster.on("online", [](const std::shared_ptr<uvw::ProcessHandle> &process_handle) {
+            std::cout << process_handle->pid() << " online!" << std::endl;
+            process_handle->kill(1);
+        });
+
+        cluster.on("disconnect", [](const std::shared_ptr<uvw::ProcessHandle> &process_handle, int64_t exit_status, int term_signal) {
+            std::cout << process_handle->pid() << " disconnected!" << std::endl;
+        });
+
+        cluster.on("exit", [](const std::shared_ptr<uvw::ProcessHandle> &process_handle, int64_t exit_status, int term_signal) {
+            std::cout << process_handle->pid() << " exit!" << std::endl;
+        });
+
+        loop->run();
+        return 0;
+    }
+
+    std::cout << "I am a worker." << std::endl;
 
     std::vector<spdlog::sink_ptr> sinks;
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
@@ -63,10 +66,10 @@ int main(int argc, char *argv[]) {
 
     auto signal_handle = loop->resource<uvw::SignalHandle>();
 
-    /*signal_handle->on<uvw::SignalEvent>([](int signum) {
-        spdlog::info("Received signal {}. Exiting.", signum);
+    signal_handle->on<uvw::SignalEvent>([](const uvw::SignalEvent &signal_event, uvw::SignalHandle &signal) {
+        spdlog::info("Received signal {}. Exiting.", signal_event.signum);
 
-        if (signum != SIGINT) {
+        if (signal_event.signum != SIGINT) {
             backward::TraceResolver tr;
             backward::StackTrace st;
             st.load_here(32);
@@ -76,7 +79,11 @@ int main(int argc, char *argv[]) {
                 spdlog::error("#{} {} {} [{}]", i, trace.object_filename, trace.object_function, trace.addr);
             }
         }
-    });*/
+
+        signal.stop();
+        signal.close();
+    });
+
 
     signal_handle->start(SIGINT);
 
@@ -162,4 +169,3 @@ int main(int argc, char *argv[]) {
     loop->close();
     return 1;
 }
-
