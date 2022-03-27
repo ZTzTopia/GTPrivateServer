@@ -1,7 +1,32 @@
 #include "tile_change_request.h"
+#include "../../../utils/random.h"
 #include "../../../server/server.h"
 
 namespace events {
+    void add_object_when_break_tile(player::Player *player, player::GameUpdatePacket *game_update_packet, world::World *world, world::Tile *tile) {
+        float random_chance = utils::random::get_generator_static().uniform(0.0f, 1.0f);
+        if (random_chance < 0.082f) {
+            auto *object = new world::Object{};
+            object->object_id = tile->get_front_id() + 1;
+            object->pos = {
+                static_cast<int>(game_update_packet->m_tile_pos_x * 32),
+                static_cast<int>(game_update_packet->m_tile_pos_y * 32)
+            };
+            object->object_amount = 1;
+            world->add_object(object);
+        }
+        else if (random_chance < 2.0f) {
+            auto *object = new world::Object{};
+            object->object_id = tile->get_front_id() + 1;
+            object->pos = {
+                static_cast<int>(game_update_packet->m_tile_pos_x * 32),
+                static_cast<int>(game_update_packet->m_tile_pos_y * 32)
+            };
+            object->object_amount = 1;
+            world->add_object(object);
+        }
+    }
+
     tile_change_request::tile_change_request(player::Player *player) {
         player->load("gup_" + std::to_string(player::PACKET_TILE_CHANGE_REQUEST), [player](player::GameUpdatePacket *game_update_packet) {
             if (player->get_current_world() == "EXIT") {
@@ -51,6 +76,8 @@ namespace events {
                     // Lava = 4 hit
                     // Rock = 10 hit
                     if (tile->get_hit_count() > ((tile->get_item_info()->break_hits / 6) <= 4 ? tile->get_item_info()->break_hits / 8 : tile->get_item_info()->break_hits / 6.5)) {
+                        add_object_when_break_tile(player, game_update_packet, world, tile);
+
                         game_update_packet->packet_type = player::PACKET_TILE_CHANGE_REQUEST;
                         game_update_packet->item_id = 18;
                         tile->remove_tile();

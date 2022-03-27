@@ -2,8 +2,8 @@
 
 #include "world.h"
 #include "../database/database.h"
-#include "../database/worlds.h"
 #include "../../vendor/proton/shared/util/ResourceUtils.h"
+#include "../utils/math.h"
 #include "../utils/random.h"
 
 namespace world {
@@ -257,6 +257,89 @@ namespace world {
         return false;
     }
 
+    void World::add_object(Object *object) {
+        for (auto &object_ : m_objects) {
+            printf("%X %X\n", object_, object);
+            if (utils::math::distance_xy<int>(object->pos, object_.second->pos) <= 32) {
+                return;
+            }
+        }
+
+        auto rand_generator = utils::random::get_generator_static();
+        int x = object->pos.x + rand_generator.uniform(0, 12);
+        int y = object->pos.y + rand_generator.uniform(0, 12);
+
+        if (x < 0) {
+            x = 0;
+        }
+
+        if (y < 0) {
+            y = 0;
+        }
+
+        if (x >= m_width * 32) {
+            x = object->pos.x;
+        }
+
+        if (y >= m_height * 32) {
+            y = object->pos.y;
+        }
+
+        object->pos = { x, y };
+
+        m_objects.insert_or_assign(m_total_object_id++, std::move(object));
+
+        player::GameUpdatePacket game_update_packet{};
+        game_update_packet.packet_type = player::PACKET_ITEM_CHANGE_OBJECT;
+        game_update_packet.object_change_type = Object::OBJECT_CHANGE_TYPE_ADD;
+        game_update_packet.pos_x = static_cast<float>(object->pos.x);
+        game_update_packet.pos_y = static_cast<float>(object->pos.y);
+        game_update_packet.item_id = object->object_id;
+        game_update_packet.object_amount = object->object_amount;
+
+        foreach([&game_update_packet](player::Player *player_) {
+            player_->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, &game_update_packet);
+        });
+    }
+
+    Tile *World::get_tile(uint16_t x, uint16_t y) {
+        if (x < 0 || y < 0 || x > 100 || y > 60) {
+            return nullptr;
+        }
+
+        return m_tiles[x + y * 100];
+    }
+
+    CL_Vec2i World::get_tile_pos(uint16_t id) {
+        for (int i = 0; i < m_tiles.size(); i++) {
+            if (m_tiles[i]->get_front_id() == id) {
+                return { i % m_width, i / m_width };
+            }
+        }
+
+        return { -1, -1 };
+    }
+
+    CL_Vec2i World::get_tile_fg_pos(uint16_t id) {
+        for (int i = 0; i < m_tiles.size(); i++) {
+            if (m_tiles[i]->get_fg() == id) {
+                return { i % m_width, i / m_width };
+            }
+        }
+
+        return { -1, -1 };
+    }
+
+    CL_Vec2i World::get_tile_bg_pos(uint16_t id) {
+        for (int i = 0; i < m_tiles.size(); i++) {
+            if (m_tiles[i]->get_fg() == id) {
+                return { i % m_width, i / m_width };
+            }
+        }
+
+        return { -1, -1 };
+    }
+
     uint8_t *World::serialize_to_mem(uint32_t *size_out, uint8_t *dest) {
         uint32_t mem_need = 20 + m_name.length() + 16;
         for (auto &tile : m_tiles) {
@@ -294,7 +377,7 @@ namespace world {
         int tile_size = m_tiles.size();
         std::memcpy(dest + mem_pos, &tile_size, 4);
         mem_pos += 4;
-        
+
         for (auto &tile : m_tiles) {
             uint16_t fg = tile->get_fg();
             std::memcpy(dest + mem_pos, &fg, 2);
@@ -344,43 +427,5 @@ namespace world {
 
         *size_out = mem_pos;
         return dest;
-    }
-
-    Tile *World::get_tile(uint16_t x, uint16_t y) {
-        if (x < 0 || y < 0 || x > 100 || y > 60) {
-            return nullptr;
-        }
-
-        return m_tiles[x + y * 100];
-    }
-
-    CL_Vec2i World::get_tile_pos(uint16_t id) {
-        for (int i = 0; i < m_tiles.size(); i++) {
-            if (m_tiles[i]->get_front_id() == id) {
-                return { i % m_width, i / m_width };
-            }
-        }
-
-        return { -1, -1 };
-    }
-
-    CL_Vec2i World::get_tile_fg_pos(uint16_t id) {
-        for (int i = 0; i < m_tiles.size(); i++) {
-            if (m_tiles[i]->get_fg() == id) {
-                return { i % m_width, i / m_width };
-            }
-        }
-
-        return { -1, -1 };
-    }
-
-    CL_Vec2i World::get_tile_bg_pos(uint16_t id) {
-        for (int i = 0; i < m_tiles.size(); i++) {
-            if (m_tiles[i]->get_fg() == id) {
-                return { i % m_width, i / m_width };
-            }
-        }
-
-        return { -1, -1 };
     }
 }

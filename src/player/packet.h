@@ -80,10 +80,15 @@ namespace player {
         uint8_t unk1; // 1
         uint8_t unk2; // 2
         uint8_t unk3; // 3
-        uint32_t net_id; // 4
+        union {// 4
+            uint32_t net_id;
+            int32_t object_change_type;
+        };
         uint32_t unk5; // 8
         uint32_t flags; // 12
-        float unk7; // 16
+        union { // 16
+            uint32_t object_amount;
+        };
         union { // 20
             uint32_t dec_item_data_size;
             uint32_t item_id;

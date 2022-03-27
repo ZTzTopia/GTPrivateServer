@@ -4,6 +4,7 @@
 
 namespace config {
     constexpr auto dev = true;
+    constexpr auto production = 1; // 1 - For using single server, 2 - For using multiple servers with libuv. (The stdout and stderr will be redirected to the log file)
     constexpr auto debug = true;
 
     namespace server {
@@ -36,5 +37,6 @@ namespace config {
 
     namespace data {
         constexpr std::string_view root = "./data/";
+        constexpr std::string_view log = "./data/log/";
     }
 }

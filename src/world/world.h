@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+#include "object.h"
 #include "tile.h"
 #include "../player/player.h"
 #include "../../vendor/proton/shared/common.h"
@@ -29,6 +30,8 @@ namespace world {
         CL_Vec2i get_tile_fg_pos(uint16_t id);
         CL_Vec2i get_tile_bg_pos(uint16_t id);
 
+        void add_object(Object *object);
+
         uint8_t *serialize_to_mem(uint32_t *size_out, uint8_t *dest);
 
         [[nodiscard]] std::string get_name() const { return m_name; }
@@ -45,6 +48,7 @@ namespace world {
         uint16_t m_height;
 
         std::vector<Tile *> m_tiles;
+        std::unordered_map<uint32_t, Object *> m_objects;
         std::vector<player::Player *> m_players;
 
         uint32_t m_total_net_id;
