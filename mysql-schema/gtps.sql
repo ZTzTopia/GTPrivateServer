@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Mar 22, 2022 at 05:20 AM
+-- Generation Time: Mar 27, 2022 at 09:25 AM
 -- Server version: 10.8.2-MariaDB-log
 -- PHP Version: 7.4.28
 
@@ -22,6 +22,20 @@ SET time_zone = "+00:00";
 --
 CREATE DATABASE IF NOT EXISTS `gtps` DEFAULT CHARACTER SET latin1 COLLATE latin1_swedish_ci;
 USE `gtps`;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `guests`
+--
+
+CREATE TABLE `guests` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `mac` varchar(17) NOT NULL,
+  `token` int(11) NOT NULL,
+  `current_world` varchar(32) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -45,10 +59,26 @@ CREATE TABLE `worlds` (
 --
 
 --
+-- Indexes for table `guests`
+--
+ALTER TABLE `guests`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `worlds`
 --
 ALTER TABLE `worlds`
   ADD PRIMARY KEY (`name`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `guests`
+--
+ALTER TABLE `guests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
