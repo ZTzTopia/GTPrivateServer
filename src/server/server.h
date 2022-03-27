@@ -9,18 +9,15 @@
 namespace server {
     class Server : public enetwrapper::ENetServer {
     public:
-        Server(int server_id);
+        Server();
         ~Server() = default;
 
         bool initialize(enet_uint16 port, size_t max_peer);
-
-        void on_update();
 
         void on_connect(ENetPeer *peer) override;
         void on_receive(ENetPeer *peer, ENetPacket *packet) override;
         void on_disconnect(ENetPeer *peer) override;
 
-        int get_server_id() const { return m_server_id; }
         player::PlayerPool *get_player_pool() { return m_player_pool; }
         world::WorldPool *get_world_pool() { return m_world_pool; }
 
@@ -29,7 +26,6 @@ namespace server {
         size_t get_max_peer() { return m_host->peerCount; }
 
     private:
-        int m_server_id;
         player::PlayerPool *m_player_pool;
         world::WorldPool *m_world_pool;
     };

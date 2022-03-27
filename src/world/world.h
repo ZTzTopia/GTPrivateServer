@@ -4,7 +4,7 @@
 
 #include "tile.h"
 #include "../player/player.h"
-#include "../proton/shared/common.h"
+#include "../../vendor/proton/shared/common.h"
 
 namespace world {
     class World {
@@ -12,7 +12,7 @@ namespace world {
         explicit World(std::string name);
         ~World();
 
-        void send_to_all(const std::function<void(player::Player *)> &callback);
+        void foreach(const std::function<void(player::Player *)> &callback);
 
         void add_player(player::Player *player);
         void remove_player(player::Player *player);

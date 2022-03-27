@@ -1,24 +1,19 @@
 #include "tile_change_request.h"
-#include "../../../server/serverpool.h"
+#include "../../../server/server.h"
 
 namespace events {
     tile_change_request::tile_change_request(player::Player *player) {
         player->load("gup_" + std::to_string(player::PACKET_TILE_CHANGE_REQUEST), [player](player::GameUpdatePacket *game_update_packet) {
-            if (player->m_current_world == "EXIT") {
+            if (player->get_current_world() == "EXIT") {
                 return;
             }
 
-            auto *server = server::get_server_pool()->get_server(player->get_server_id());
-            if (!server) {
-                return;
-            }
-
-            auto *world_pool = server->get_world_pool();
+            auto *world_pool = player->get_server()->get_world_pool();
             if (!world_pool) {
                 return;
             }
 
-            auto *world = world_pool->get_world(player->m_current_world);
+            auto *world = world_pool->get_world(player->get_current_world());
             if (!world) {
                 return;
             }
@@ -38,7 +33,7 @@ namespace events {
                         player->send_packet(player::NET_MESSAGE_GAME_MESSAGE, "action|play_sfx\nfile|audio/cant_break_tile.wav\ndelayMS|0\n");
                         player->send_variant({
                             "OnTalkBubble",
-                            player->m_net_id,
+                            player->get_net_id(),
                             "It's too strong to break.",
                             0,
                             1
@@ -49,7 +44,7 @@ namespace events {
                     tile->reset_hit_count_by_time();
 
                     game_update_packet->packet_type = player::PACKET_TILE_APPLY_DAMAGE;
-                    game_update_packet->net_id = player->m_net_id;
+                    game_update_packet->net_id = player->get_net_id();
                     game_update_packet->tile_damage = 6;
 
                     // Dirt = 3 hit
@@ -61,8 +56,8 @@ namespace events {
                         tile->remove_tile();
                     }
 
-                    world->send_to_all([player, game_update_packet](player::Player *other_player) {
-                        other_player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, game_update_packet);
+                    world->foreach([game_update_packet](player::Player *player_) {
+                        player_->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, game_update_packet);
                     });
                 }
             }

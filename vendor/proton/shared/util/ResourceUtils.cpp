@@ -1,7 +1,7 @@
 #include <cassert>
-#include <zlib.h>
-#include <brotli/encode.h>
-#include <brotli/decode.h>
+#include "zlib.h"
+#include "brotli/encode.h"
+#include "brotli/decode.h"
 
 #include "ResourceUtils.h"
 

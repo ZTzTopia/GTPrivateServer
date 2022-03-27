@@ -1,19 +1,22 @@
 #pragma once
+#include <thread>
 #include <string>
 
 namespace config {
+    constexpr auto dev = true;
     constexpr auto debug = true;
     constexpr std::string_view address = "127.0.0.1";
 
-    namespace server_gateway {
-        constexpr auto count = 2;
-        constexpr auto port = 17256;
+    namespace server_game {
+        const auto use_hardware_concurrency = true;
+        const auto count = use_hardware_concurrency ? std::thread::hardware_concurrency() : 1;
+        const auto port = 17200;
         constexpr auto max_peer = 32;
     }
 
-    namespace server_game {
-        constexpr auto count = 4;
-        constexpr auto port = server_gateway::port - (server_game::count + 1);
+    namespace server_gateway {
+        constexpr auto count = 2;
+        constexpr auto port = server_game::port - (server_gateway::count + 1);
         constexpr auto max_peer = 32;
     }
 

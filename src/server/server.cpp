@@ -3,9 +3,8 @@
 #include "server.h"
 
 namespace server {
-    Server::Server(int server_id)
-        : m_server_id(server_id)
-        , m_player_pool(nullptr)
+    Server::Server()
+        : m_player_pool(nullptr)
         , m_world_pool(nullptr) {}
 
     bool Server::initialize(enet_uint16 port, size_t max_peer) {
@@ -21,41 +20,10 @@ namespace server {
         return true;
     }
 
-    void Server::on_update() {
-        for (ENetPeer *current_peer = m_host->peers; current_peer < &m_host->peers[m_host->peerCount]; ++current_peer) {
-            if (current_peer->state != ENET_PEER_STATE_CONNECTED) {
-                continue;
-            }
-
-            // From github copilot 🤣. (good is work)
-            float packet_loss = (float) current_peer->packetLoss / (float) ENET_PEER_PACKET_LOSS_SCALE;
-            float packet_loss_variance = (float) current_peer->packetLossVariance / (float) ENET_PEER_PACKET_LOSS_SCALE;
-            if (packet_loss > 0.0f && packet_loss_variance > 0.0f) {
-                if (packet_loss_variance > packet_loss) {
-                    packet_loss_variance = packet_loss;
-                }
-
-                float min = packet_loss - packet_loss_variance;
-                float max = packet_loss + packet_loss_variance;
-
-                if (min < 0.5f && max > 0.5f) {
-                    /*spdlog::info("Client {} kicked for packet loss.", current_peer->connectID);
-                    enet_peer_disconnect_later(current_peer, 0);
-                    return;*/
-                }
-            }
-        }
-    }
-
     void Server::on_connect(ENetPeer *peer) {
         spdlog::info("Client connected. (id: {})", peer->connectID);
 
-        player::Player *player = m_player_pool->get_player(peer->connectID); // If send on to server
-        if (!player) {
-            spdlog::debug("asda");
-            player = m_player_pool->new_player(m_server_id, peer);
-        }
-
+        player::Player *player = m_player_pool->new_player(this, peer);
         player->send_packet(player::NET_MESSAGE_SERVER_HELLO, "");
     }
 
@@ -63,11 +31,6 @@ namespace server {
         player::Player *player = m_player_pool->get_player(peer->connectID);
         if (!player) {
             enet_peer_disconnect_now(peer, 0);
-            return;
-        }
-
-        if (player->m_on_send_to_server) {
-            m_player_pool->remove_player(player);
             return;
         }
 

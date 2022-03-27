@@ -3,78 +3,93 @@
 #include <thread>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/rotating_file_sink.h>
+#include <uvw/async.h>
+#include <uvw/loop.h>
+#include <uvw/signal.h>
+#include <uvw/thread.h>
 
 #include "config.h"
+#include "cluster/cluster.h"
 #include "database/database.h"
 #include "enetwrapper/enetserver.h"
 #include "http/http.h"
-#include "include/backtrace-cpp/backtrace.hpp"
+#include "include/backward-cpp/backward.hpp"
 #include "items/itemsdb.h"
-#include "server/serverpool.h"
-#include "server/servergateway.h"
-#include "spdlog/sinks/daily_file_sink.h"
-#include "spdlog/sinks/rotating_file_sink.h"
+#include "server/server.h"
 
 static std::atomic<bool> running{ true };
 static std::function<void()> shutdown_callback;
 
-int main() {
+/*int main(int argc, char *argv[]) {
+    uv_loop_t *loop = uv_default_loop();
+
+    if (cluster::get_cluster(loop)->is_primary()) {
+        std::cout << "I am the primary." << std::endl;
+        std::cout << "Worker ProcessID: " << cluster::get_cluster(loop)->fork(argv[0]) << std::endl;
+
+        cluster::get_cluster(loop)->on("data", [](std::string &data) {
+            std::cout << "Received data from worker: " << data<< std::endl;
+        });
+    }
+    else if (cluster::get_cluster(loop)->is_worker()) {
+        uv_sleep(1000);
+        std::cout << "I am a worker." << std::endl;
+    }
+
+    uv_run(loop, UV_RUN_DEFAULT);
+    uv_loop_close(loop);
+    return 0;
+}*/
+
+int main(int argc, char *argv[]) {
 #ifndef _WIN32
     std::cout << "Other platforms not tested." << std::endl;
     return EXIT_FAILURE;
 #endif
+
+    auto loop = uvw::Loop::getDefault();
 
     std::vector<spdlog::sink_ptr> sinks;
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
     sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>("server.log", 1024 * 1024, 8));
     auto logger = std::make_shared<spdlog::logger>("server", sinks.begin(), sinks.end());
     logger->set_pattern("[%Y-%m-%dT%TZ] [%n] [%^%l%$] [thread %t] %v");
-    logger->set_level(config::dev ? spdlog::level::debug : spdlog::level::info);
+    logger->set_level(config::debug ? spdlog::level::debug : spdlog::level::info);
     logger->flush_on(spdlog::level::debug);
     spdlog::set_default_logger(logger);
 
     spdlog::info("Growtopia private server starting..");
 
-    const auto signal_handler{
-        [](int sig) {
-            spdlog::info("Received signal {}. Exiting.", sig);
+    auto signal_handle = loop->resource<uvw::SignalHandle>();
 
-            if (sig != SIGINT) {
-                shutdown_callback();
+    /*signal_handle->on<uvw::SignalEvent>([](int signum) {
+        spdlog::info("Received signal {}. Exiting.", signum);
 
-                backward::TraceResolver tr;
-                backward::StackTrace st;
-                st.load_here(32);
-                tr.load_stacktrace(st);
-                for (size_t i = 0; i < st.size(); ++i) {
-                    backward::ResolvedTrace trace = tr.resolve(st[i]);
-                    spdlog::error("#{} {} {} [{}]", i, trace.object_filename, trace.object_function, trace.addr);
-                }
-            }
-            else {
-                running.store(false);
+        if (signum != SIGINT) {
+            backward::TraceResolver tr;
+            backward::StackTrace st;
+            st.load_here(32);
+            tr.load_stacktrace(st);
+            for (size_t i = 0; i < st.size(); ++i) {
+                backward::ResolvedTrace trace = tr.resolve(st[i]);
+                spdlog::error("#{} {} {} [{}]", i, trace.object_filename, trace.object_function, trace.addr);
             }
         }
-    };
+    });*/
 
-    std::signal(SIGILL, signal_handler);
-    std::signal(SIGFPE, signal_handler);
-    std::signal(SIGSEGV, signal_handler);
-    std::signal(SIGINT, signal_handler);
-    std::signal(SIGTERM, signal_handler);
-    std::signal(SIGBREAK, signal_handler);
-    std::signal(SIGABRT, signal_handler);
-#ifndef _WIN32
-    std::signal(SIGHUP, signal_handler);
-    std::signal(SIGBUS, signal_handler);
-#endif
+    signal_handle->start(SIGINT);
 
+    // TODO: Make this more good.
     if (!database::get_database()->connect()) {
         spdlog::error("Failed to connect to database.");
 
         delete database::get_database();
         return EXIT_FAILURE;
     }
+
+    auto *http = new http::HTTP{ *loop };
+    http->listen("0.0.0.0", 80);
 
     if (!items::get_items_db()->initialize()) {
         spdlog::error("Failed to load items database.");
@@ -84,9 +99,6 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    // TODO: Change me to a good server_data.php.
-    std::thread http{ http::HTTP::create_server_data, std::ref(running), config::server_gateway::port, config::server_gateway::count };
-
     if (!enetwrapper::ENetServer::one_time_init()) {
         spdlog::error("Failed to initialize ENet.");
 
@@ -95,115 +107,59 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    // Server gateway should not be here.
-    std::vector<server::ServerGateway *> servers_gateway{};
-    for (unsigned int i = 1; i <= config::server_gateway::count; i++) {
-        spdlog::debug("Starting server gateway {}.", i);
-        auto *server_gateway = new server::ServerGateway{};
-        if (server_gateway->initialize(static_cast<enet_uint16>(config::server_gateway::port + i), config::server_gateway::max_peer)) {
-            servers_gateway.emplace_back(server_gateway);
-        }
-        else {
-            delete server_gateway;
-        }
-    }
+    auto *server = new server::Server{};
+    if (!server->initialize(config::server::start_port, config::server::max_peer)) {
+        spdlog::error("Failed to create server.");
 
-    if (servers_gateway.empty()) {
-        spdlog::error("Failed to initialize any server gateway.");
-        return EXIT_FAILURE;
-    }
-
-    std::vector<std::thread> server_threads(config::server_game::count);
-    for (unsigned int i = 1; i <= config::server_game::count; i++) {
-        spdlog::debug("Starting {} servers game.", i);
-
-        std::atomic<bool> success{ true };
-        std::thread thread([i, &success]() {
-            if (!server::get_server_pool()->new_server(config::server_game::port + i, config::server_game::max_peer)) {
-                success.store(false);
-            }
-
-            while (running.load() && success.load()) {
-                for (auto &server : server::get_server_pool()->get_servers()) {
-                    server->on_update();
-                }
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            }
-        });
-
-        if (!success.load()) {
-            continue;
-        }
-
-        if (config::server_game::use_hardware_concurrency) {
-#ifdef _WIN32
-            auto mask = (static_cast<DWORD_PTR>(1) << (i - 1));
-            DWORD_PTR dw = SetThreadAffinityMask(thread.native_handle(), mask);
-            if (dw == 0) {
-                DWORD dwErr = GetLastError();
-                spdlog::error("Error calling SetThreadAffinityMask: {}", dwErr);
-                return EXIT_FAILURE;
-            }
-#else
-            cpu_set_t cpuset;
-            CPU_ZERO(&cpuset);
-            CPU_SET(i - 1, &cpuset);
-            int rc = pthread_setaffinity_np(thread.native_handle(), sizeof(cpu_set_t), &cpuset);
-            if (rc != 0) {
-                spdlog::error("Error calling pthread_setaffinity_np: {}", rc);
-                return EXIT_FAILURE;
-            }
-#endif
-        }
-
-        server_threads.emplace_back(std::move(thread));
-    }
-
-    if (server_threads.empty()) {
-        spdlog::error("Failed to initialize any game server.");
-        return EXIT_FAILURE;
-    }
-
-    std::thread exit_thread{
-        [] {
-            std::string command;
-            while (std::cin >> command) {
-                if (command == "exit" || command == "quit" || command == "stop") {
-                    running.store(false);
-                    break;
-                }
-            }
-        }
-    };
-
-    shutdown_callback = [&exit_thread, servers_gateway, &server_threads, &http]{
-        spdlog::info("Shutting down..");
-
+        delete server;
         delete database::get_database();
         delete items::get_items_db();
-
-        http.join();
-
-        for (auto &server_gateway : servers_gateway) {
-            delete server_gateway;
-        }
-
-        if (server::get_server_pool()) {
-            delete server::get_server_pool();
-        }
-
-        for (auto &thread : server_threads) {
-            thread.join();
-        }
-
-        exit_thread.join();
-    };
-
-    while (running.load()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        return EXIT_FAILURE;
     }
 
-    shutdown_callback();
-    return EXIT_SUCCESS;
+    auto on_update_stopped = std::make_shared<bool>();
+    auto on_update = [](const std::shared_ptr<void> &data) {
+        while (!*std::static_pointer_cast<bool>(data)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        }
+    };
+
+    auto on_update_thread = loop->resource<uvw::Thread>(on_update, on_update_stopped);
+    on_update_thread->run();
+
+    auto exit_thread = [](const std::shared_ptr<void> &data) {
+        std::string command;
+        while (std::cin >> command) {
+            if (command == "exit" || command == "quit" || command == "stop") {
+                shutdown_callback();
+                break;
+            }
+        }
+    };
+
+    auto exit_thread_thread = loop->resource<uvw::Thread>(exit_thread);
+    exit_thread_thread->run();
+
+    auto async_handle = loop->resource<uvw::AsyncHandle>();
+    async_handle->on<uvw::AsyncEvent>([loop](const auto &, auto &handle) {
+        handle.close();
+        loop->stop();
+    });
+
+    shutdown_callback = [http, signal_handle, on_update_thread, exit_thread_thread, async_handle] {
+        signal_handle->close();
+
+        delete http;
+        delete database::get_database();
+
+        on_update_thread->join();
+        exit_thread_thread->join();
+
+        async_handle->send();
+    };
+
+    loop->run();
+    loop->close();
+    return 1;
 }
+

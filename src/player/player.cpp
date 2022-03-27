@@ -16,11 +16,19 @@
 #include "../database/database.h"
 
 namespace player {
-    Player::Player(int server_id, ENetPeer *peer)
+    Player::Player(server::Server *server, ENetPeer *peer)
         : EventManager()
-        , m_on_send_to_server(false)
-        , m_server_id(server_id)
-        , m_peer(peer) {
+        , m_server(server)
+        , m_peer(peer)
+        , m_user_id(0)
+        , m_raw_name("")
+        , m_mac("")
+        , m_display_name("")
+        , m_country("us")
+        , m_current_world("")
+        , m_net_id(0)
+        , m_pos(CL_Vec2f{})
+    {
         peer->data = reinterpret_cast<void *>(peer->connectID);
 
         // Memory leak or no? or it destroyed after Player is destroyed?
@@ -60,12 +68,14 @@ namespace player {
                     guests.token = -1,
                     guests.current_world = m_current_world
                 ).where(guests.id == m_user_id));
-                return -1;
+                return 0;
             }
         }
         catch(const std::exception &e) {
             spdlog::error("Error inserting new guest: {}", e.what());
         }
+
+        return 0;
     }
 
     bool Player::load_() {
@@ -76,7 +86,6 @@ namespace player {
             for (const auto &row : (*db)(select(all_of(guests)).from(guests).where(guests.name == m_raw_name and guests.mac == m_mac))) {
                 if (row._is_valid) {
                     m_user_id = row.id;
-                    m_token = row.token;
                     m_current_world = row.current_world;
                     return true;
                 }

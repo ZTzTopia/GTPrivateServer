@@ -35,7 +35,9 @@ namespace database {
             return true;
         }
 
-        sqlpp::mysql::connection *get_connection() { return m_db_connection; }
+        sqlpp::mysql::connection *get_connection() {
+            return m_db_connection;
+        }
 
     private:
         sqlpp::mysql::connection *m_db_connection;

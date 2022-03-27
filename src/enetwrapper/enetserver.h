@@ -1,10 +1,10 @@
 #pragma once
 #include <thread>
+#include <atomic>
 #include <enet/enet.h>
 
 namespace enetwrapper {
     class ENetServer {
-        friend class ServerGateway;
         friend class Server;
     public:
         ENetServer();

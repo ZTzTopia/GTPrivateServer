@@ -1,11 +1,11 @@
 #include "input.h"
 #include "../../../utils/textparse.h"
-#include "../../../server/serverpool.h"
+#include "../../../server/server.h"
 
 namespace events {
     input::input(player::Player *player) {
         player->load("input", [player](const std::string &string) {
-            if (player->m_current_world == "EXIT") {
+            if (player->get_current_world() == "EXIT") {
                 return;
             }
 
@@ -16,17 +16,12 @@ namespace events {
                 return;
             }
 
-            auto *server = server::get_server_pool()->get_server(player->get_server_id());
-            if (!server) {
-                return;
-            }
-
-            auto *world_pool = server->get_world_pool();
+            auto *world_pool = player->get_server()->get_world_pool();
             if (!world_pool) {
                 return;
             }
 
-            auto *world = world_pool->get_world(player->m_current_world);
+            auto *world = world_pool->get_world(player->get_current_world());
             if (!world) {
                 return;
             }
@@ -39,19 +34,19 @@ namespace events {
                 return r;
             }), text.end());
 
-            world->send_to_all([player, text](player::Player *other_player) {
-                other_player->send_variant({
+            world->foreach([player, text](player::Player *player_) {
+                player_->send_variant({
                     "OnConsoleMessage",
                     fmt::format(
                         "CP:0_PL:4_OID:_CT:[W]_ `o<`w{}``> ``{}``",
-                        player->m_display_name,
+                        player->get_display_name(),
                         text
                     )
                 });
 
-                other_player->send_variant({
+                player_->send_variant({
                     "OnTalkBubble",
-                    player->m_net_id,
+                    player->get_net_id(),
                     fmt::format(
                         "`w{}``",
                         text

@@ -3,7 +3,7 @@
 
 #include "itemsdb.h"
 #include "../config.h"
-#include "../proton/shared/util/ResourceUtils.h"
+#include "../../vendor/proton/shared/util/ResourceUtils.h"
 
 namespace items {
     ItemsDB::ItemsDB()
@@ -67,11 +67,13 @@ namespace items {
             return false;
         }
 
-        std::streamoff begin = file.tellg();
         file.seekg(0, std::ifstream::end);
-        std::streamoff end = file.tellg();
+        m_data_size = file.tellg();
         file.seekg(0, std::ifstream::beg);
-        m_data_size = static_cast<uint32_t>(end - begin);
+
+        if (m_data_size <= 0) {
+            return false;
+        }
 
         m_data = new uint8_t[m_data_size];
         file.read(reinterpret_cast<char*>(m_data), m_data_size);

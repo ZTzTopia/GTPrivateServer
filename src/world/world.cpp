@@ -3,7 +3,7 @@
 #include "world.h"
 #include "../database/database.h"
 #include "../database/worlds.h"
-#include "../proton/shared/util/ResourceUtils.h"
+#include "../../vendor/proton/shared/util/ResourceUtils.h"
 #include "../utils/random.h"
 
 namespace world {
@@ -31,10 +31,8 @@ namespace world {
         m_players.clear();
     }
 
-    void World::send_to_all(const std::function<void(player::Player *)> &callback) {
-        for (auto &player : m_players) {
-            callback(player);
-        }
+    void World::foreach(const std::function<void(player::Player *)> &callback) {
+        std::for_each(m_players.cbegin(), m_players.cend(), callback);
     }
 
     void World::add_player(player::Player *player) {
@@ -47,7 +45,7 @@ namespace world {
     }
 
     void World::generate(uint16_t width, uint16_t height) {
-        auto rand_generator = random::get_generator_static();
+        auto rand_generator = utils::random::get_generator_static();
         int main_door_pos_x = rand_generator.uniform(width - (width - 1), width - 1);
 
         m_tiles.reserve(width * height);
@@ -185,10 +183,6 @@ namespace world {
     }
 
     bool World::load() {
-        if (!m_tiles.empty()) {
-            return true;
-        }
-
         try {
             sqlpp::mysql::connection *db = database::get_database()->get_connection();
 
@@ -248,7 +242,6 @@ namespace world {
 
                         m_tiles.push_back(tile);
                     }
-
 
                     m_last_tile_hash = std::hash<std::vector<Tile *>>{}(m_tiles);
 
