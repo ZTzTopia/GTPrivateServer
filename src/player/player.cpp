@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "player.h"
 #include "eventmanager.h"
 
