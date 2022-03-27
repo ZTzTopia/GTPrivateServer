@@ -39,7 +39,7 @@ namespace events {
             game_update_packet.flags |= 0x8;
             game_update_packet.data_extended_size = data_size;
             game_update_packet.data_extended = reinterpret_cast<uint32_t&>(data);
-            player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, &game_update_packet, sizeof(player::GameUpdatePacket) - 4, data, ENET_PACKET_FLAG_RELIABLE);
+            player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, &game_update_packet, sizeof(player::GameUpdatePacket) - 4, data);
 
             player->send_variant({
                 "OnSpawn",

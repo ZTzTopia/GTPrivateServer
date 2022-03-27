@@ -43,6 +43,8 @@ namespace player {
         events::quit_to_exit{ this };
         events::refresh_item_data{ this };
         events::requestedName{ this };
+
+        m_inventory = new Inventory{};
     }
 
     Player::~Player() {
@@ -79,6 +81,10 @@ namespace player {
     }
 
     bool Player::load_() {
+        m_inventory->size = 16;
+        m_inventory->items.insert_or_assign(18, 1);
+        m_inventory->items.insert_or_assign(32, 1);
+
         try {
             sqlpp::mysql::connection *db = database::get_database()->get_connection();
 
@@ -96,6 +102,43 @@ namespace player {
         }
 
         return false;
+    }
+
+    void Player::send_inventory() {
+        uint32_t mem_need = m_inventory->items.size() * 4 + 8;
+        auto *data = new uint8_t[mem_need];
+        data[mem_need] = 0;
+
+        uint8_t w = 0x01;
+        std::memcpy(data, &w, 1);
+        uint32_t mem_pos = 1;
+
+        std::memcpy(data + mem_pos, &m_inventory->size, 4);
+        mem_pos += 4;
+
+        uint16_t inventory_size = m_inventory->items.size();
+        std::memcpy(data + mem_pos, &inventory_size, 2);
+        mem_pos += 2;
+
+        for (auto &item : m_inventory->items) {
+            std::memcpy(data + mem_pos, &item.first, 2);
+            mem_pos += 2;
+
+            std::memcpy(data + mem_pos, &item.second, 1);
+            mem_pos += 1;
+
+            uint8_t flags = 0;
+            std::memcpy(data + mem_pos, &flags, 1);
+            mem_pos += 1;
+        }
+
+        player::GameUpdatePacket game_update_packet{};
+        game_update_packet.packet_type = player::PACKET_SEND_INVENTORY_STATE;
+        game_update_packet.net_id = -1;
+        game_update_packet.flags |= 0x8;
+        game_update_packet.data_extended_size = mem_pos;
+        game_update_packet.data_extended = reinterpret_cast<uint32_t&>(data);
+        send_raw_packet(player::NET_MESSAGE_GAME_PACKET, &game_update_packet, sizeof(player::GameUpdatePacket) - 4, data);
     }
 
     void Player::process_generic_text_or_game_message(const std::string &text) {

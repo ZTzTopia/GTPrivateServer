@@ -4,6 +4,7 @@
 
 #include "packet.h"
 #include "eventmanager.h"
+#include "inventory.h"
 #include "../../vendor/proton/shared/util/Variant.h"
 
 namespace server {
@@ -18,6 +19,8 @@ namespace player {
 
         size_t save(size_t token = -1, bool insert = false) const;
         bool load_();
+
+        void send_inventory();
 
         void process_generic_text_or_game_message(const std::string &text);
         void process_game_packet(GameUpdatePacket *game_update_packet);
@@ -59,13 +62,17 @@ namespace player {
     private:
         server::Server *m_server;
         ENetPeer *m_peer;
+
         uint64_t m_user_id;
         std::string m_raw_name;
         std::string m_display_name;
         std::string m_mac;
         std::string m_country;
         std::string m_current_world;
+
         uint32_t m_net_id;
         CL_Vec2f m_pos;
+
+        Inventory *m_inventory;
     };
 }

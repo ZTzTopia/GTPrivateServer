@@ -10,8 +10,8 @@ This is a private server for Growtopia.
 - [ ] Sub-server (This is vertical scaling, if u have 4 cpu cores it will run 4 sub-servers. I will make horizontal scaling soon).
 - [x] Database (MariaDB server or you can use MySql server).
 - [ ] Anti cheat.
-- [x] Player database. (Guest)
-- [ ] Player inventory.
+- [x] Player database. (Guest account)
+- [x] Player inventory.
 - [ ] Player stats.
 - [ ] Player clothes.
 - [ ] Player commands.
