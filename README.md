@@ -1,10 +1,13 @@
 # Growtopia Private Server
+[![GitHub Release](https://img.shields.io/github/release/ZTzTopia/GTPriavteServer.svg)](https://github.com/ZTzTopia/GTPriavteServer/releases/latest) 
+![Github Action](https://github.com/ZTzTopia/GTPrivateServer/actions/workflows/cmake.yml/badge.svg)
+
 This is a private server for Growtopia.
 
 ## 📜 Features
-- [x] Server gateway (This is to connect to sub-servers it will use load balancer to choose which sub-servers are suitable to join).
-- [x] Load balancer (Weighted least connection algorithm and check load avg for linux).
-- [x] Sub-server (This is vertical scaling, if u have 4 cpu cores it will run 4 sub-servers. I will make horizontal scaling soon).
+- [ ] Server gateway (This is to connect to sub-servers it will use load balancer to choose which sub-servers are suitable to join).
+- [ ] Load balancer (Weighted least connection algorithm and check load avg for linux).
+- [ ] Sub-server (This is vertical scaling, if u have 4 cpu cores it will run 4 sub-servers. I will make horizontal scaling soon).
 - [x] Database (MariaDB server or you can use MySql server).
 - [ ] Anti cheat.
 - [x] Player database. (Guest)
