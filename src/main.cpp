@@ -96,6 +96,7 @@ int main(int argc, char *argv[]) {
     });
 
     signal_handle->start(SIGINT);
+    signal_handle->start(SIGHUP);
 
     // TODO: Make this more good.
     if (!database::get_database()->connect()) {
@@ -108,7 +109,7 @@ int main(int argc, char *argv[]) {
     auto *http = new http::HTTP{ *loop };
     http->listen("0.0.0.0", 80);
 
-    if (!items::get_items_db()->initialize()) {
+    if (!items::get_items_db()->serialize()) {
         spdlog::error("Failed to load items database.");
 
         delete database::get_database();
