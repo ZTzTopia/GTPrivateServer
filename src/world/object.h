@@ -5,7 +5,7 @@
 
 namespace world {
     struct Object {
-        static enum eObjectChangeType {
+        enum eObjectChangeType {
             OBJECT_CHANGE_TYPE_COLLECT = 0,
             OBJECT_CHANGE_TYPE_ADD = -1,
             OBJECT_CHANGE_TYPE_REMOVE = -2,
