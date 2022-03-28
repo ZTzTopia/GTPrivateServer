@@ -54,8 +54,10 @@ int main(int argc, char *argv[]) {
         spdlog::info("Primary {} is running", uvw::Utilities::OS::pid());
         spdlog::info("Number of cores: {}", uvw::Utilities::cpuInfo().size());
 
-        // Inherit the primary logger to worker (stdout and stderr).
-        cluster->setup_primary(false); // Set silent to false. (Is not good if you have two worker!, I don't implement it yet.)
+        if (config::dev) {
+            // Inherit the primary logger to worker (stdout and stderr).
+            cluster->setup_primary(false); // Set silent to false. (Is not good if you have two worker!, I don't implement it yet.)
+        }
 
         // We use one worker for developing mode.
         for (uint8_t i = 0; i < (config::dev ? 1 : uvw::Utilities::cpuInfo().size()); ++i) {
@@ -132,6 +134,9 @@ int main(int argc, char *argv[]) {
                     loop->stop();
                     return;
                 }
+
+                // Tell the server is started successfully to primary (useless for now).
+                cluster->send(fmt::format("action|started\nport|{}", config::server::start_port));
             }
         });
     }
