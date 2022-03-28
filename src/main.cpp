@@ -15,6 +15,7 @@
 #include "database/database.h"
 #include "enetwrapper/enetserver.h"
 #include "server/server.h"
+#include "utils/textparse.h"
 
 int main(int argc, char *argv[]) {
 #if (!defined(_WIN32) || defined(__MINGW32__)) && !defined(__linux__)
@@ -54,6 +55,8 @@ int main(int argc, char *argv[]) {
         spdlog::info("Primary {} is running", uvw::Utilities::OS::pid());
         spdlog::info("Number of cores: {}", uvw::Utilities::cpuInfo().size());
 
+        uint16_t port_offset = 0;
+
         if (config::dev) {
             // Inherit the primary logger to worker (stdout and stderr).
             cluster->setup_primary(false); // Set silent to false. (Is not good if you have two worker!, I don't implement it yet.)
@@ -76,11 +79,11 @@ int main(int argc, char *argv[]) {
             spdlog::info("Message from {}: {}", worker->id, message);
         });
 
-        cluster->on("online", [](cluster::Worker *worker) {
+        cluster->on("online", [&port_offset](cluster::Worker *worker) {
             spdlog::info("Worker {} online", worker->id);
 
             // Start the server.
-            worker->send("action|start");
+            worker->send(fmt::format("action|start\nportoffset|{}\n", port_offset++));
         });
 
         cluster->on("exit", [&cluster, argv](const cluster::Worker *worker, int64_t exit_status, int term_signal) {
@@ -128,15 +131,15 @@ int main(int argc, char *argv[]) {
                     return;
                 }
 
+                TextParse text_parse{ message };
+                auto port_offset = text_parse.get<uint16_t>("portoffset", 1);
+
                 server = new server::Server{};
-                if (!server->initialize(config::server::start_port, config::server::max_peer)) {
+                if (!server->initialize(config::server::start_port + port_offset, config::server::max_peer)) {
                     spdlog::error("Failed to create server.");
                     loop->stop();
                     return;
                 }
-
-                // Tell the server is started successfully to primary (useless for now).
-                cluster->send(fmt::format("action|started\nport|{}", config::server::start_port));
             }
         });
     }
