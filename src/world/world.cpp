@@ -258,13 +258,6 @@ namespace world {
     }
 
     void World::add_object(Object *object) {
-        for (auto &object_ : m_objects) {
-            printf("%X %X\n", object_, object);
-            if (utils::math::distance_xy<int>(object->pos, object_.second->pos) <= 32) {
-                return;
-            }
-        }
-
         auto rand_generator = utils::random::get_generator_static();
         int x = object->pos.x + rand_generator.uniform(0, 12);
         int y = object->pos.y + rand_generator.uniform(0, 12);

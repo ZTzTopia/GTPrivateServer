@@ -9,21 +9,25 @@
 
 namespace cluster {
     struct Worker {
-        std::shared_ptr<uvw::ProcessHandle> process;
-        std::shared_ptr<uvw::PipeHandle> pipe;
-        uint32_t id;
-        bool is_connected;
-        bool is_dead;
+        std::shared_ptr<uvw::ProcessHandle> process; // The worker process handle.
+        std::shared_ptr<uvw::PipeHandle> pipe[4]; // Worker pipe: stdin, stdout, stderr, ipc
 
+        uint32_t id; // unique id for this worker.
+
+        bool is_connected; // is the worker connected to the master?
+        bool is_dead; // is the worker dead/exited?
+
+        // Send message to child if from primary, otherwise send to primary.
         bool send(const std::string &message) {
-            assert(pipe->writable());
-            assert(pipe->readable());
-
-            /*if (!is_connected || is_dead) {
+            if (!pipe[3]->writable() || !pipe[3]->readable()) {
                 return false;
-            }*/
+            }
 
-            pipe->write(const_cast<char *>(message.c_str()), message.size());
+            if (!is_connected || is_dead) {
+                return false;
+            }
+
+            pipe[3]->write(const_cast<char *>(message.c_str()), message.size());
             return true;
         }
     };

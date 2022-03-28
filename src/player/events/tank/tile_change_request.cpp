@@ -5,7 +5,7 @@
 namespace events {
     void add_object_when_break_tile(player::Player *player, player::GameUpdatePacket *game_update_packet, world::World *world, world::Tile *tile) {
         float random_chance = utils::random::get_generator_static().uniform(0.0f, 1.0f);
-        if (random_chance < 0.082f) {
+        if (random_chance < 0.083121212121f) {
             auto *object = new world::Object{};
             object->object_id = tile->get_front_id() + 1;
             object->pos = {
@@ -15,7 +15,7 @@ namespace events {
             object->object_amount = 1;
             world->add_object(object);
         }
-        else if (random_chance < 2.0f) {
+        else if (random_chance < 0.26f) {
             auto *object = new world::Object{};
             object->object_id = tile->get_front_id() + 1;
             object->pos = {

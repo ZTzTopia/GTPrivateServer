@@ -3,9 +3,15 @@
 #include <string>
 
 namespace config {
-    constexpr auto dev = true;
-    constexpr auto production = 1; // 1 - For using single server, 2 - For using multiple servers with libuv. (The stdout and stderr will be redirected to the log file)
     constexpr auto debug = true;
+
+    constexpr auto dev = true;
+    constexpr auto prod = 1; // 1 - For using single server, 2 - For using multiple servers with libuv. (The stdout and stderr will be redirected to the log file)
+    constexpr auto production = dev ? 0 : prod;
+
+    namespace experimental {
+
+    }
 
     namespace server {
         constexpr std::string_view host = "127.0.0.1";

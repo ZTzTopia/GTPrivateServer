@@ -3,7 +3,6 @@
  */
 
 #include <functional>
-#include <uvw/pipe.h>
 
 #include "cluster.h"
 #include "../utils/random.h"
@@ -11,54 +10,90 @@
 namespace cluster {
     Cluster::Cluster(std::shared_ptr<uvw::Loop> &loop)
         : m_loop(loop)
+        , m_worker(nullptr)
+        , m_silent(true)
     {
         if (is_worker()) {
             m_worker = new Worker{};
-            m_worker->pipe = m_loop->resource<uvw::PipeHandle>(true);
-            m_worker->pipe->on<uvw::ErrorEvent>([this](const uvw::ErrorEvent &error_event, auto &) {
-                printf("[%d] Worker pipe error\n", m_worker->id);
+            m_worker->pipe[3] = m_loop->resource<uvw::PipeHandle>(true);
+
+            m_worker->pipe[3]->on<uvw::ErrorEvent>([this](const uvw::ErrorEvent &error_event, uvw::PipeHandle &pipe) {
                 m_worker->is_dead = true;
                 emit("error", std::string{ error_event.what() });
+                pipe.close();
             });
-            m_worker->pipe->on<uvw::CloseEvent>([this](const uvw::CloseEvent &, uvw::PipeHandle &socket) {
+
+            m_worker->pipe[3]->on<uvw::CloseEvent>([this](const uvw::CloseEvent &, uvw::PipeHandle &pipe) {
                 m_worker->is_connected = false;
                 emit("disconnect");
-                socket.close();
+                pipe.close();
             });
-            m_worker->pipe->on<uvw::EndEvent>([this](const uvw::EndEvent &, uvw::PipeHandle &socket) {
+
+            m_worker->pipe[3]->on<uvw::EndEvent>([this](const uvw::EndEvent &, uvw::PipeHandle &pipe) {
                 m_worker->is_connected = false;
                 emit("disconnect");
-                socket.close();
+                pipe.stop();
             });
-            m_worker->pipe->on<uvw::DataEvent>([this](const uvw::DataEvent &data_event, uvw::PipeHandle &socket) {
+
+            m_worker->pipe[3]->on<uvw::DataEvent>([this](const uvw::DataEvent &data_event, uvw::PipeHandle &socket) {
                 std::string data(data_event.data.get(), data_event.length);
                 emit("message", data);
             });
-            m_worker->pipe->init();
-            m_worker->pipe->open(0);
-            m_worker->pipe->read();
+
+            m_worker->pipe[3]->init();
+            m_worker->pipe[3]->open(3);
+            m_worker->pipe[3]->read();
+
             m_worker->is_connected = true;
             m_worker->is_dead = false;
-            m_worker->send("online"); // Send the online message to the parent.
+
+            // Send the online message to the parent.
+            m_worker->send("online");
         }
     }
 
     Cluster::~Cluster() {
         if (is_primary()) {
             for (auto &worker : m_workers) {
-                worker->process->close();
+                for (auto &pipe : worker->pipe) {
+                    if (pipe) {
+                        pipe->close();
+                    }
+                }
+
+                if (worker->process) {
+                    worker->process->close();
+                }
+
                 delete worker;
             }
 
             m_workers.clear();
         }
         else {
-            m_worker->process->close();
+            for (auto &pipe : m_worker->pipe) {
+                if (pipe) {
+                    pipe->close();
+                }
+            }
+
+            if (m_worker->process) {
+                m_worker->process->close();
+            }
+
             delete m_worker;
         }
     }
 
-    bool Cluster::is_primary() const {
+    void Cluster::setup_primary(bool silent) {
+        if (is_worker()) {
+            return;
+        }
+
+        m_silent = silent;
+    }
+
+    bool Cluster::is_primary() {
         size_t buffer_size = 5;
         char buffer[5];
 
@@ -69,43 +104,50 @@ namespace cluster {
         return true;
     }
 
-    bool Cluster::is_worker() const {
-        return !is_primary();
+    bool Cluster::is_worker() {
+        return is_primary() ? false : true; // !is_primary() make CLion grey out all code after call is_worker().
     }
 
-    int Cluster::fork(char *program_name) {
+    Worker *Cluster::fork(char *program_name) {
         if (is_worker()) {
-            return 0;
+            return nullptr;
         }
 
         auto *worker = new Worker{};
-        auto process_handle = m_loop->resource<uvw::ProcessHandle>();
-        process_handle->on<uvw::ErrorEvent>([this, worker](const uvw::ErrorEvent &error_event, auto &) {
+        auto process = m_loop->resource<uvw::ProcessHandle>();
+
+        process->on<uvw::ErrorEvent>([this, worker](const uvw::ErrorEvent &error_event, auto &) {
             worker->is_dead = true;
             emit("error", worker, std::string{ error_event.what() });
         });
-        process_handle->on<uvw::ExitEvent>([this, worker](const uvw::ExitEvent &exit_event, uvw::ProcessHandle &handle) {
+
+        process->on<uvw::ExitEvent>([this, worker](const uvw::ExitEvent &exit_event, uvw::ProcessHandle &process) {
             worker->is_dead = true;
             emit("exit", worker, exit_event.status, exit_event.signal);
+            process.close();
         });
 
-        auto worker_pipe = m_loop->resource<uvw::PipeHandle>(true);
-        worker_pipe->on<uvw::ErrorEvent>([this, worker](const uvw::ErrorEvent &error_event, uvw::PipeHandle &pipe) {
+        auto ipc = m_loop->resource<uvw::PipeHandle>(true);
+
+        ipc->on<uvw::ErrorEvent>([this, worker](const uvw::ErrorEvent &error_event, uvw::PipeHandle &pipe) {
             worker->is_dead = true;
             emit("error", worker, std::string{ error_event.what() });
             pipe.close();
         });
-        worker_pipe->on<uvw::CloseEvent>([this, worker](const uvw::CloseEvent &, uvw::PipeHandle &pipe) {
+
+        ipc->on<uvw::CloseEvent>([this, worker](const uvw::CloseEvent &, uvw::PipeHandle &pipe) {
             m_worker->is_connected = false;
             emit("disconnect", worker);
             pipe.close();
         });
-        worker_pipe->on<uvw::EndEvent>([this, worker](const uvw::EndEvent &, uvw::PipeHandle &pipe) {
+
+        ipc->on<uvw::EndEvent>([this, worker](const uvw::EndEvent &, uvw::PipeHandle &pipe) {
             worker->is_connected = false;
             emit("disconnect", worker);
-            pipe.close();
+            pipe.stop();
         });
-        worker_pipe->on<uvw::DataEvent>([this, worker, worker_pipe](const uvw::DataEvent &data_event, uvw::PipeHandle &pipe) {
+
+        ipc->on<uvw::DataEvent>([this, worker](const uvw::DataEvent &data_event, uvw::PipeHandle &pipe) {
             std::string data(data_event.data.get(), data_event.length);
             if (data == "online") {
                 worker->is_connected = true;
@@ -115,11 +157,16 @@ namespace cluster {
 
             emit("message", worker, data);
         });
-        worker_pipe->init();
 
-        // The error because uvw dev insert the poStreamStdio to the end of poStdio. Why not use the same variable?
-        process_handle->disableStdIOInheritance();
-        process_handle->stdio(*worker_pipe, uvw::Flags<uvw::ProcessHandle::StdIO>::from<uvw::ProcessHandle::StdIO::CREATE_PIPE, uvw::ProcessHandle::StdIO::READABLE_PIPE, uvw::ProcessHandle::StdIO::WRITABLE_PIPE>());
+        ipc->init();
+
+        process->disableStdIOInheritance();
+        process->stdio(*ipc, uvw::Flags<uvw::ProcessHandle::StdIO>::from<uvw::ProcessHandle::StdIO::CREATE_PIPE, uvw::ProcessHandle::StdIO::READABLE_PIPE, uvw::ProcessHandle::StdIO::WRITABLE_PIPE>());
+
+        uvw::Flags<uvw::details::UVStdIOFlags> inherit = m_silent ? uvw::ProcessHandle::StdIO::IGNORE_STREAM : uvw::ProcessHandle::StdIO::INHERIT_FD;
+        process->stdio(uvw::StdIN, uvw::ProcessHandle::StdIO::IGNORE_STREAM);
+        process->stdio(uvw::StdOUT, inherit);
+        process->stdio(uvw::StdERR, inherit);
 
         char *args[3];
         args[0] = program_name;
@@ -130,18 +177,19 @@ namespace cluster {
         env[0] = const_cast<char *>("CHILD=TRUE");
         env[1] = nullptr;
 
-        process_handle->spawn(args[0], args, env);
-        worker_pipe->read();
-        emit("fork", process_handle);
+        process->spawn(args[0], args, env);
+        emit("fork", process);
 
-        worker->process = process_handle;
-        worker->pipe = worker_pipe;
+        ipc->read();
+
+        worker->process = process;
+        worker->pipe[3] = ipc;
         worker->id = utils::random::get_generator_static().uniform(static_cast<uint32_t>(std::numeric_limits<int32_t>::max()), std::numeric_limits<uint32_t>::max());
         worker->is_connected = false;
         worker->is_dead = false;
         m_workers.emplace_back(worker);
 
-        return process_handle->pid();
+        return worker;
     }
 
     bool Cluster::send(const std::string &message) {

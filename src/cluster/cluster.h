@@ -16,11 +16,13 @@ namespace cluster {
         explicit Cluster(std::shared_ptr<uvw::Loop> &loop);
         ~Cluster();
 
-        [[nodiscard]] bool is_primary() const;
-        [[nodiscard]] bool is_worker() const;
+        void setup_primary(bool silent);
+
+        bool is_primary();
+        bool is_worker();
 
         // Fork new worker.
-        int fork(char *program_name);
+        Worker *fork(char *program_name);
 
         // Send message to parent.
         bool send(const std::string &message);
@@ -29,5 +31,7 @@ namespace cluster {
         std::shared_ptr<uvw::Loop> m_loop;
         std::vector<Worker *> m_workers;
         Worker *m_worker; // This for worker.
+
+        bool m_silent;
     };
 }
