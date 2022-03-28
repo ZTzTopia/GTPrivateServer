@@ -8,6 +8,8 @@
 namespace http {
     HTTP::HTTP(uvw::Loop &loop)
         : m_server()
+        , m_host("")
+        , m_port(0)
     {
         m_server = loop.resource<uvw::TCPHandle>();
         m_server->simultaneousAccepts();
@@ -21,17 +23,16 @@ namespace http {
         m_server->bind(host, port);
         m_server->listen();
 
-        m_server->on<uvw::ListenEvent>([](const uvw::ListenEvent &, uvw::TCPHandle &handle) {
+        m_server->on<uvw::ListenEvent>([this](const uvw::ListenEvent &, uvw::TCPHandle &handle) {
             std::shared_ptr<uvw::TCPHandle> client = handle.loop().resource<uvw::TCPHandle>();
 
-            client->on<uvw::DataEvent>([](const uvw::DataEvent &data_event, uvw::TCPHandle &client) {
+            client->on<uvw::DataEvent>([this](const uvw::DataEvent &data_event, uvw::TCPHandle &client) {
                 std::string http_request(data_event.data.get(), data_event.length);
                 if (http_request.find("/growtopia/server_data.php") == std::string::npos) {
                     client.close();
                     return;
                 }
 
-                std::string host = std::string{ config::server::host };
                 std::string body{
                     fmt::format(
                         "server|{}\r\n"
@@ -41,8 +42,8 @@ namespace http {
                         "type2|1\r\n" // Tell client to use new packet.
                         "meta|defined\r\n"
                         "RTENDMARKERBS1001",
-                        host,
-                        17000
+                        m_host,
+                        m_port
                     )
                 };
 

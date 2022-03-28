@@ -3,37 +3,14 @@
  */
 
 #pragma once
-#include <string>
-#include <thread>
-#include <uvw/process.h>
-
-#include "eventemitter.h"
-#include "worker.h"
 
 namespace cluster {
-    class Cluster : public EventEmitter {
+    class Cluster {
     public:
-        explicit Cluster(std::shared_ptr<uvw::Loop> &loop);
-        ~Cluster();
+        Cluster() = default;
+        ~Cluster() = default;
 
-        void setup_primary(bool silent);
-
-        bool is_primary();
-        bool is_worker();
-
-        // Fork new worker.
-        Worker *fork(char *program_name);
-
-        // Send message to primary.
-        bool send(const std::string &message);
-
-        std::vector<Worker *> get_workers() const { return m_workers; }
-
-    private:
-        std::shared_ptr<uvw::Loop> m_loop;
-        std::vector<Worker *> m_workers;
-        Worker *m_worker; // This for worker.
-
-        bool m_silent;
+        static bool is_primary();
+        static bool is_worker();
     };
 }
