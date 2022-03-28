@@ -47,7 +47,7 @@ namespace cluster {
             m_worker->is_connected = true;
             m_worker->is_dead = false;
 
-            // Send the online message to the parent.
+            // Send the online message to the primary.
             m_worker->send("online");
         }
     }

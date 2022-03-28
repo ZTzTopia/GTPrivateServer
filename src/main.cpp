@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
         });
 
         cluster->on("disconnect", []() {
-            spdlog::error("Worker disconnected");
+            spdlog::error("Worker disconnected from primary!");
         });
 
         cluster->on("message", [&](const std::string &message) {

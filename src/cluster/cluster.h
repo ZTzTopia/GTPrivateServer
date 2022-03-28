@@ -24,8 +24,10 @@ namespace cluster {
         // Fork new worker.
         Worker *fork(char *program_name);
 
-        // Send message to parent.
+        // Send message to primary.
         bool send(const std::string &message);
+
+        std::vector<Worker *> get_workers() const { return m_workers; }
 
     private:
         std::shared_ptr<uvw::Loop> m_loop;
