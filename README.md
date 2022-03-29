@@ -46,6 +46,7 @@ $ cmake --build .
 ## 📦 Running The Program
 - Run [MySQL](https://www.mysql.com/)/[MariaDB](https://mariadb.org/) server
 - Run [Redis](https://redis.io/) server.
+- If you on windows, you need move needed dynamic binary from `/path/to/program/bin` to `/path/to/program/`.
 - Move your latest `items.dat` to `path/to/program/data/`.
 - Run the program
 - Enjoy

@@ -64,7 +64,17 @@ else ()
             uvw/2.11.0
             hiredis/1.0.2
             redis-plus-plus/1.3.2
-        GENERATORS cmake_find_package)
+        GENERATORS cmake_find_package
+        IMPORTS "bin, *.dll -> ./bin"
+        OPTIONS
+            spdlog:shared=True
+            openssl:shared=True
+            zlib:shared=True
+            brotli:shared=True
+            libcurl:shared=True
+            mariadb-connector-c:shared=True
+            hiredis:shared=True
+            redis-plus-plus:shared=True)
 
     conan_cmake_autodetect(settings)
     conan_cmake_install(PATH_OR_REFERENCE .
@@ -105,16 +115,10 @@ if (Sqlpp11_FOUND)
     target_link_libraries(${PROJECT_NAME} ${sqlpp11_LIBRARIES})
 endif ()
 
-find_package(libuv REQUIRED)
-if (libuv_FOUND)
-    target_include_directories(${PROJECT_NAME} PUBLIC ${libuv_INCLUDE_DIR})
-    target_link_libraries(${PROJECT_NAME} ${libuv_LIBRARIES})
-endif ()
-
 find_package(uvw REQUIRED)
 if (uvw_FOUND)
     target_include_directories(${PROJECT_NAME} PUBLIC ${uvw_INCLUDE_DIR})
-    # target_link_libraries(${PROJECT_NAME} ${uvw_LIBRARIES})
+    target_link_libraries(${PROJECT_NAME} ${uvw_LIBRARIES})
 endif ()
 
 find_package(redis++ QUIET)
