@@ -2,7 +2,7 @@
 [![GitHub Release](https://img.shields.io/github/release/ZTzTopia/GTPriavteServer.svg)](https://github.com/ZTzTopia/GTPriavteServer/releases/latest) 
 ![Github Action](https://github.com/ZTzTopia/GTPrivateServer/actions/workflows/cmake.yml/badge.svg)
 
-This is a private server for Growtopia.
+This is a private server for Growtopia uses [spdlog](https://github.com/gabime/spdlog), [zlib](https://github.com/madler/zlib), [brotli](https://github.com/google/brotli), [MariaDB](https://mariadb.org/), [sqlpp11](https://github.com/rbock/sqlpp11), [Redis](https://redis.io/), [libuv](https://github.com/libuv/libuv), [uvw](https://github.com/skypjack/uvw/), [hiredis](https://github.com/redis/hiredis), and [redis++](https://github.com/sewenew/redis-plus-plus).
 
 ## 📜 Features
 - [ ] Server gateway (This is to connect to sub-servers it will use load balancer to choose which sub-servers are suitable to join).
@@ -28,18 +28,27 @@ This is a private server for Growtopia.
 ## ⚙️ Setting Up
 - Rename `src/config.sample.h` to `src/config.h` and fill it.
 
-## 🔨 Building The Source
-- If you on windows, you need to install mariadb connector c from https://mariadb.com/downloads/connectors/
+## 📝 Requirements
+You need download [Conan, the C/C++ Package Manager](https://conan.io) and install it. CMake will install needed package for windows with [Conan, the C/C++ Package Manager](https://conan.io/).
+Required python >= 3.5
 ```shell
-mkdir build
-cd build
-cmake ..
-cmake --build .
+$ pip install conan
+```
+
+## 🔨 Building The Source
+```shell
+$ mkdir build
+$ cd build
+$ cmake ..
+$ cmake --build .
 ```
 
 ## 📦 Running The Program
-- If you on windows, you need move all needed library from `out/_deps` (**brotlicommon.dll**, **brotlienc.dll**, **brotlidec.dll**, **spdlogd.dll**, and **zlib1.dll**) to `path/to/program/`.
+- Run [MySQL](https://www.mysql.com/)/[MariaDB](https://mariadb.org/) server
+- Run [Redis](https://redis.io/) server.
 - Move your latest `items.dat` to `path/to/program/data/`.
+- Run the program
+- Enjoy
 
 ## ✨ Credits
 - Thanks to one of my friends helped a lot to this project.

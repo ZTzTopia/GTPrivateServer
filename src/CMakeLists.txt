@@ -1,9 +1,4 @@
-project(Main)
-
-include(FetchContent)
-
-option(BUILD_SHARED_LIBS "Build shared library" ON)
-option(BUILD_TESTING "Enable testing with ctest." OFF)
+project(Main LANGUAGES CXX)
 
 file(GLOB INCLUDE_FILES
     *.h
@@ -42,203 +37,93 @@ add_executable(${PROJECT_NAME}
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     NOMINMAX
     WIN32_LEAN_AND_MEAN
-    UVW_AS_LIB)
+    SPDLOG_FMT_EXTERNAL)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/enet/include)
 target_link_libraries(${PROJECT_NAME} enet)
 
-find_package(spdlog QUIET)
+if (MSVC)
+    add_definitions(/EHsc)
+else ()
+    add_definitions(-fexceptions)
+endif ()
+
+if (CONAN_EXPORTED)
+    include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup()
+else ()
+    include(${CMAKE_CURRENT_SOURCE_DIR}/conan.cmake)
+
+    conan_cmake_configure(REQUIRES
+            spdlog/1.9.2
+            zlib/1.2.11
+            brotli/1.0.9
+            libcurl/7.80.0
+            mariadb-connector-c/3.1.12
+            sqlpp11/0.61
+            uvw/2.11.0
+            hiredis/1.0.2
+            redis-plus-plus/1.3.2
+        GENERATORS cmake_find_package)
+
+    conan_cmake_autodetect(settings)
+    conan_cmake_install(PATH_OR_REFERENCE .
+        BUILD missing
+        REMOTE conancenter
+        SETTINGS ${settings})
+endif ()
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_BINARY_DIR}")
+
+find_package(spdlog REQUIRED)
 if (spdlog_FOUND)
     target_include_directories(${PROJECT_NAME} PUBLIC ${spdlog_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} ${spdlog_LIBRARIES})
-else ()
-    FetchContent_Declare(
-        spdlog
-        GIT_REPOSITORY https://github.com/gabime/spdlog.git
-        GIT_TAG origin/v1.x
-        GIT_SHALLOW TRUE)
-
-    FetchContent_GetProperties(spdlog)
-    if (NOT spdlog_POPULATED)
-        FetchContent_Populate(spdlog)
-        target_include_directories(${PROJECT_NAME} PUBLIC ${spdlog_SOURCE_DIR}/include)
-        add_subdirectory(
-            ${spdlog_SOURCE_DIR}
-            ${spdlog_BINARY_DIR}
-            EXCLUDE_FROM_ALL)
-    endif ()
-
-    target_link_libraries(${PROJECT_NAME} spdlog::spdlog)
 endif ()
 
-find_package(ZLIB QUIET)
-if (MINGW OR NOT WIN32)
-    if (ZLIB_FOUND)
-        target_include_directories(${PROJECT_NAME} PUBLIC ${ZLIB_INCLUDE_DIRS})
-        target_link_libraries(${PROJECT_NAME} ${ZLIB_LIBRARIES})
-    else ()
-        message(FATAL_ERROR "Please install zlib with your package manager.")
-    endif ()
-else ()
-    if (NOT ZLIB_FOUND)
-        FetchContent_Declare(
-            zlib
-            GIT_REPOSITORY https://github.com/madler/zlib.git
-            GIT_TAG origin/develop
-            GIT_SHALLOW TRUE)
-
-        FetchContent_GetProperties(zlib)
-        if (NOT zlib_POPULATED)
-            FetchContent_Populate(zlib)
-            target_include_directories(${PROJECT_NAME} PUBLIC
-                ${zlib_BINARY_DIR} # For zconf.h
-                ${zlib_SOURCE_DIR})
-            add_subdirectory(
-                ${zlib_SOURCE_DIR}
-                ${zlib_BINARY_DIR}
-                EXCLUDE_FROM_ALL)
-        endif ()
-
-        target_link_libraries(${PROJECT_NAME} zlib)
-    endif ()
+find_package(ZLIB REQUIRED)
+if (ZLIB_FOUND)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${ZLIB_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} ${ZLIB_LIBRARIES})
 endif ()
 
-find_package(brotli QUIET)
-if (MINGW OR NOT WIN32)
-    if (brotli_FOUND)
-        target_include_directories(${PROJECT_NAME} PUBLIC ${brotli_INCLUDE_DIR})
-        target_link_libraries(${PROJECT_NAME}
-            ${brotli_common_LIBRARY}
-            ${brotli_enc_LIBRARY}
-            ${brotli_dec_LIBRARY})
-    else ()
-        message(FATAL_ERROR "Please install brotli with your package manager.")
-    endif ()
-else ()
-    if (NOT brotli_FOUND)
-        FetchContent_Declare(
-            brotli
-            GIT_REPOSITORY https://github.com/google/brotli.git
-            GIT_TAG origin/master
-            GIT_SHALLOW TRUE)
-
-        FetchContent_GetProperties(brotli)
-        if (NOT brotli_POPULATED)
-            FetchContent_Populate(brotli)
-            target_include_directories(${PROJECT_NAME} PUBLIC ${brotli_SOURCE_DIR}/c/include)
-            add_subdirectory(
-                ${brotli_SOURCE_DIR}
-                ${brotli_BINARY_DIR}
-                EXCLUDE_FROM_ALL)
-        endif ()
-
-        target_link_libraries(${PROJECT_NAME}
-            brotlicommon
-            brotlienc
-            brotlidec)
-    endif ()
+find_package(Brotli REQUIRED)
+if (Brotli_FOUND)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${Brotli_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} ${Brotli_LIBRARIES})
 endif ()
 
-#[[find_package(MariaDB QUIET)
-if (MariaDB_FOUND)
-    target_include_directories(${PROJECT_NAME} PUBLIC
-        ${MariaDB_INCLUDE_DIR}
-        ${MariaDB_INCLUDE_DIR}/mysql)
-    target_link_libraries(${PROJECT_NAME} ${MariaDB_LIBRARIES})
-else ()
-    # If you on windows, you need to install mariadb from https://mariadb.com/downloads/connectors/
-    message(FATAL_ERROR "Please install MariaDB connector c with your package manager.")
-endif ()]]
+find_package(mariadb-connector-c REQUIRED)
+if (mariadb-connector-c_FOUND)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${mariadb-connector-c_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} ${mariadb-connector-c_LIBRARIES})
+endif ()
 
-find_package(sqlpp11 QUIET)
-if (sqlpp11_FOUND)
-    target_include_directories(${PROJECT_NAME} PUBLIC ${sqlpp11_INCLUDE_DIR})
+find_package(Sqlpp11 REQUIRED)
+if (Sqlpp11_FOUND)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${sqlpp11_INCLUDE_DIRS})
     target_link_libraries(${PROJECT_NAME} ${sqlpp11_LIBRARIES})
-else ()
-    if (NOT sqlpp11_FOUND)
-        FetchContent_Declare(
-            sqlpp11
-            GIT_REPOSITORY https://github.com/rbock/sqlpp11.git
-            GIT_TAG origin/main
-            GIT_SHALLOW TRUE)
-
-        FetchContent_GetProperties(sqlpp11)
-        if (NOT sqlpp11_POPULATED)
-            option(BUILD_MARIADB_CONNECTOR "Build MariaDB Connector" ON)
-
-            FetchContent_Populate(sqlpp11)
-            target_include_directories(${PROJECT_NAME} PUBLIC ${sqlpp11_SOURCE_DIR}/include)
-            add_subdirectory(
-                ${sqlpp11_SOURCE_DIR}
-                ${sqlpp11_BINARY_DIR}
-                EXCLUDE_FROM_ALL)
-
-            # Is only me got the error or you too? so need to fix it.
-            file(COPY ../cmake/FindMariaDB.cmake DESTINATION ${sqlpp11_SOURCE_DIR}/cmake)
-        endif ()
-
-        target_link_libraries(${PROJECT_NAME} sqlpp11::mariadb)
-    endif ()
 endif ()
 
-#[[find_package(uv QUIET)
-if (MINGW OR NOT WIN32)
-    if (uv_FOUND)
-        target_include_directories(${PROJECT_NAME} PUBLIC ${uv_INCLUDE_DIR})
-        target_link_libraries(${PROJECT_NAME} ${uv_LIBRARY})
-    else ()
-        message(FATAL_ERROR "Please install libuv with your package manager.")
-    endif ()
-else ()
-    if (NOT uv_FOUND)
-        FetchContent_Declare(
-            uv
-            GIT_REPOSITORY https://github.com/libuv/libuv.git
-            GIT_TAG origin/v1.x
-            GIT_SHALLOW TRUE)
+find_package(libuv REQUIRED)
+if (libuv_FOUND)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${libuv_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} ${libuv_LIBRARIES})
+endif ()
 
-        FetchContent_GetProperties(uv)
-        if (NOT uv_POPULATED)
-            FetchContent_Populate(uv)
-            target_include_directories(${PROJECT_NAME} PUBLIC ${uv_SOURCE_DIR}/include)
-            add_subdirectory(
-                ${uv_SOURCE_DIR}
-                ${uv_BINARY_DIR}
-                EXCLUDE_FROM_ALL)
-        endif ()
-
-        target_link_libraries(${PROJECT_NAME} uv)
-    endif ()
-endif ()]]
-
-find_package(uvw QUIET)
-if (uvw_FOUND2)
+find_package(uvw REQUIRED)
+if (uvw_FOUND)
     target_include_directories(${PROJECT_NAME} PUBLIC ${uvw_INCLUDE_DIR})
-    target_link_libraries(${PROJECT_NAME} ${uvw_LIBRARY})
-else ()
-    if (NOT uvw_FOUND)
-        FetchContent_Declare(
-            uvw
-            GIT_REPOSITORY https://github.com/skypjack/uvw.git
-            GIT_TAG origin/master
-            GIT_SHALLOW TRUE)
+    # target_link_libraries(${PROJECT_NAME} ${uvw_LIBRARIES})
+endif ()
 
-        FetchContent_GetProperties(uvw)
-        if (NOT uvw_POPULATED)
-            option(BUILD_UVW_LIBS "Prepare targets for static library rather than for a header-only library." ON)
-
-            FetchContent_Populate(uvw)
-            target_include_directories(${PROJECT_NAME} PUBLIC ${uvw_SOURCE_DIR}/src)
-            add_subdirectory(
-                ${uvw_SOURCE_DIR}
-                ${uvw_BINARY_DIR}
-                EXCLUDE_FROM_ALL)
-        endif ()
-
-        target_link_libraries(${PROJECT_NAME} uvw)
-    endif ()
+find_package(redis++ QUIET)
+if (redis++_FOUND)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${redis++_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} ${redis++_LIBRARIES})
 endif ()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
+    C_STANDARD 11
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
 )
