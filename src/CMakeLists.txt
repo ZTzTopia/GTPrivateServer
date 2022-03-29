@@ -55,6 +55,7 @@ else ()
 
     conan_cmake_configure(REQUIRES
             spdlog/1.9.2
+            openssl/1.1.1m
             zlib/1.2.11
             brotli/1.0.9
             libcurl/7.80.0
