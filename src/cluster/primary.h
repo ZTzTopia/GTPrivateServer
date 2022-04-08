@@ -13,8 +13,8 @@
 namespace cluster {
     class Primary : public EventEmitter {
     public:
-        explicit Primary(std::shared_ptr<uvw::Loop> &loop, bool silent = true);
-        ~Primary() = default;
+        explicit Primary(const std::shared_ptr<uvw::Loop> &loop, bool silent = true);
+        ~Primary();
 
         Worker *fork(const std::string &program_path);
 

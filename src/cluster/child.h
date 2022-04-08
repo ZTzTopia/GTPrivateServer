@@ -13,8 +13,8 @@
 namespace cluster {
     class Child : public EventEmitter {
     public:
-        explicit Child(std::shared_ptr<uvw::Loop> &loop);
-        ~Child() = default;
+        explicit Child(const std::shared_ptr<uvw::Loop> &loop);
+        ~Child();
 
         void disconnect();
         void destroy(int signum = SIGTERM);
