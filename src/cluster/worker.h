@@ -13,7 +13,7 @@ namespace cluster {
 
     class Worker : public EventEmitter {
     public:
-        Worker(std::shared_ptr<uvw::Loop> &loop, int id);
+        Worker(const std::shared_ptr<uvw::Loop> &loop, int id);
         ~Worker();
 
         void create_process(const std::string &program_path, bool silent = true);

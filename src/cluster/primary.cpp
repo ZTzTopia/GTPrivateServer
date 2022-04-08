@@ -2,14 +2,20 @@
  * Inspired by the Node.JS cluster.
  */
 
-#include <spdlog/fmt/fmt.h>
+#include <fmt/format.h>
 
 #include "primary.h"
 
 namespace cluster {
-    Primary::Primary(std::shared_ptr<uvw::Loop> &loop, bool silent)
+    Primary::Primary(const std::shared_ptr<uvw::Loop> &loop, bool silent)
         : m_loop(loop)
         , m_silent(silent) {}
+
+    Primary::~Primary() {
+        for (auto &worker : m_workers) {
+            delete worker.second;
+        }
+    }
 
     Worker *Primary::fork(const std::string &program_path) {
         static int id = 0;

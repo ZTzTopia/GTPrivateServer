@@ -2,12 +2,10 @@
  * Inspired by the Node.JS cluster.
  */
 
-#include <functional>
-
 #include "child.h"
 
 namespace cluster {
-    Child::Child(std::shared_ptr<uvw::Loop> &loop) {
+    Child::Child(const std::shared_ptr<uvw::Loop> &loop) {
         int id = -1;
         if (!uvw::Utilities::OS::env("CHILD_UNIQUE_ID").empty()) {
             id = std::stoi(uvw::Utilities::OS::env("CHILD_UNIQUE_ID"));
@@ -23,6 +21,10 @@ namespace cluster {
         m_worker->ipc_pipe()->read();
 
         m_worker->send_internal("online");
+    }
+
+    Child::~Child() {
+        delete m_worker;
     }
     
     void Child::disconnect() {
