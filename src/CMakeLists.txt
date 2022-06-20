@@ -2,11 +2,15 @@ project(Main LANGUAGES CXX)
 
 file(GLOB INCLUDE_FILES
     *.h
-    **/*.h)
+    **/*.h
+    **/**/*.h
+    ../vendor/proton/shared/*.h)
 
 file(GLOB SOURCE_FILES
     *.cpp
-    **/*.cpp)
+    **/*.cpp
+    **/**/*.cpp
+    ../vendor/proton/shared/**/*.cpp)
 
 add_executable(${PROJECT_NAME}
     ${INCLUDE_FILES}

@@ -17,15 +17,18 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    auto server{ std::make_shared<server::Server>(config) };
+    auto server{ std::make_unique<server::Server>(config) };
     if (!server->start()) {
-        spdlog::error("Failed to start server!");
         return 1;
     }
 
-    while (server.get()) {
+    while (server.get()) { // Just to avoid compiler warning.
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
     return 0;
 }
+
+// TODO: Refactor peer class.
+// TODO: Refactor packet class.
+// Every world handle by one thread?

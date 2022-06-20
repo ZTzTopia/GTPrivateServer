@@ -1,6 +1,8 @@
 #pragma once
+#include <algorithm>
 #include <string>
 #include <vector>
+#include <fmt/format.h>
 
 namespace utils {
     class TextParse {

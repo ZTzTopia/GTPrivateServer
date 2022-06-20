@@ -2,6 +2,8 @@
 #include "http.h"
 #include "../config.h"
 #include "../enetwrapper/enet_server.h"
+#include "../event/event_pool.h"
+#include "../player/player_pool.h"
 
 namespace server {
     class Server : public enetwrapper::ENetServer {
@@ -18,5 +20,7 @@ namespace server {
     private:
         std::shared_ptr<Config> m_config;
         std::shared_ptr<Http> m_http;
+        std::shared_ptr<event::EventPool> m_event_pool;
+        std::shared_ptr<player::PlayerPool> m_player_pool;
     };
 }
