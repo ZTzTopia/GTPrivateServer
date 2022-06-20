@@ -1,6 +1,6 @@
 #pragma once
 #include "../event_context.h"
 
-namespace requested_name {
+namespace refresh_item_data {
     void function(const event::EventContext& ctx);
 }

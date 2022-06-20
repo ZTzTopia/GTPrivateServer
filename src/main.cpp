@@ -32,3 +32,5 @@ int main(int argc, char *argv[])
 // TODO: Refactor peer class.
 // TODO: Refactor packet class.
 // Every world handle by one thread?
+// TODO: Modernize the proton shit.
+// TODO: Refactor code. This is fucking rush code.

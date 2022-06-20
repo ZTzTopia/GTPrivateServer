@@ -7,6 +7,7 @@ namespace server {
     Server::Server(std::shared_ptr<Config> config) : m_config{ std::move(config) }
     {
         m_http = std::make_unique<Http>(config);
+        m_item_db = std::make_shared<item::ItemDB>();
         m_event_pool = std::make_unique<event::EventPool>();
         m_player_pool = std::make_unique<player::PlayerPool>();
     }
@@ -15,6 +16,11 @@ namespace server {
     {
         if (!m_http->listen("0.0.0.0", 443)) {
             spdlog::error("Failed to listen on port 443");
+            return false;
+        }
+
+        if (!m_item_db->load()) {
+            spdlog::error("Failed to load item database");
             return false;
         }
 
@@ -53,11 +59,17 @@ namespace server {
             case player::NET_MESSAGE_GENERIC_TEXT:
             case player::NET_MESSAGE_GAME_MESSAGE: {
                 event::EventContext ctx{};
+                ctx.player = player;
+                ctx.item_db = m_item_db;
+
                 m_event_pool->try_find_and_fire_event(player::get_text(packet), ctx);
                 break;
             }
             case player::NET_MESSAGE_GAME_PACKET: {
                 event::EventContext ctx{};
+                ctx.player = player;
+                ctx.item_db = m_item_db;
+
                 m_event_pool->try_find_and_fire_event(std::to_string(player::get_struct(packet)->type), ctx);
                 break;
             }
