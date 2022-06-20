@@ -1,26 +1,12 @@
-#include <iostream>
 #include <spdlog/spdlog.h>
-#include <spdlog/sinks/rotating_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "config.h"
+#include "logger/logger.h"
 #include "server/http.h"
 
 int main(int argc, char *argv[])
 {
-    try {
-        std::vector<spdlog::sink_ptr> sinks;
-        sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
-        sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>("private_server.log", 1024 * 1024 * 5, 16));
-
-        std::shared_ptr<spdlog::logger> combined_logger{ std::make_shared<spdlog::logger>("GTPrivateServer", sinks.begin(), sinks.end()) };
-        combined_logger->set_level(spdlog::level::trace);
-
-        spdlog::register_logger(combined_logger);
-        spdlog::set_default_logger(combined_logger);
-    }
-    catch (const spdlog::spdlog_ex& ex) {
-        std::cout << "Log initialization failed: " << ex.what() << std::endl;
+    if (!logger::Logger::init()) {
         return 1;
     }
 
@@ -28,12 +14,14 @@ int main(int argc, char *argv[])
 
     auto config{ std::make_shared<Config>() };
     if (!config->load("./config.json")) {
-        spdlog::error("Failed to load config file");
         return 1;
     }
 
     auto http{ std::make_shared<server::Http>(config) };
-    http->listen("0.0.0.0", 443);
+    if (!http->listen("0.0.0.0", 443)) {
+        spdlog::error("Failed to start HTTP server");
+        return 1;
+    }
 
     for (;;) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
