@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 
     auto http{ std::make_shared<server::Http>(config) };
     if (!http->listen("0.0.0.0", 443)) {
-        spdlog::error("Failed to start HTTP server");
+        spdlog::error("Failed to start HTTP server.");
         return 1;
     }
 

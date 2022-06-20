@@ -2,11 +2,11 @@ project(Main LANGUAGES CXX)
 
 file(GLOB INCLUDE_FILES
     *.h
-    server/*.h)
+    **/*.h)
 
 file(GLOB SOURCE_FILES
     *.cpp
-    server/*.cpp)
+    **/*.cpp)
 
 add_executable(${PROJECT_NAME}
     ${INCLUDE_FILES}
@@ -31,8 +31,8 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC
     CPPHTTPLIB_OPENSSL_SUPPORT
     SPDLOG_FMT_EXTERNAL)
 
-target_link_libraries(${PROJECT_NAME}
-    enet)
+# target_link_libraries(${PROJECT_NAME}
+    # enet
     # argon2_cpp)
 
 # https://github.com/conan-io/conan-center-index/pull/10040
@@ -94,7 +94,7 @@ find_package(fmt REQUIRED)
 target_link_libraries(${PROJECT_NAME} fmt::fmt)
 
 find_package(LibreSSL REQUIRED)
-target_link_libraries(${PROJECT_NAME} LibreSSL::SSL LibreSSL::Crypto LibreSSL::TLS)
+target_link_libraries(${PROJECT_NAME} LibreSSL::Crypto LibreSSL::SSL LibreSSL::TLS)
 
 find_package(mariadb-connector-c REQUIRED)
 target_link_libraries(${PROJECT_NAME} mariadb-connector-c::mariadb-connector-c)

@@ -55,26 +55,45 @@ namespace server {
     {
         m_server->set_logger([](const httplib::Request& req, const httplib::Response& res) {
             spdlog::info("{} {} {}", req.method, req.path, res.status);
+
             if (!req.headers.empty()) {
-                spdlog::info("Headers:");
+                spdlog::debug("Headers:");
                 for (auto& header : req.headers) {
-                    spdlog::info("\t{}: {}", header.first, header.second);
+                    spdlog::debug("\t{}: {}", header.first, header.second);
                 }
             }
 
             if (!req.params.empty()) {
-                spdlog::info("Params:");
-                spdlog::info("\t{}", httplib::detail::params_to_query_str(req.params));
+                spdlog::debug("Params:");
+                spdlog::debug("\t{}", httplib::detail::params_to_query_str(req.params));
             }
         });
 
         m_server->set_error_handler([](const httplib::Request& req, httplib::Response& res) {
-            res.set_content("Hello, world!", "text/plain");
+            res.set_content(fmt::format("Hello, world! {} ({})", httplib::detail::status_message(res.status), res.status), "text/plain");
+        });
+
+        m_server->set_exception_handler([](const httplib::Request& req, httplib::Response& res, std::exception& ex) {
+            res.status = 500;
+            res.set_content(fmt::format("Hello, world! {}", ex.what()), "text/plain");
         });
 
         m_server->Post("/growtopia/server_data.php", [&](const httplib::Request& req, httplib::Response& res) {
-            res.set_content("", "text/html");
-            return true;
+            if (req.params.empty() || req.get_header_value("User-Agent").find("UbiServices_SDK") == std::string::npos) {
+                res.status = 403;
+                return;
+            }
+
+            utils::TextParse text_parse{};
+            text_parse.add("server", "127.0.0.1");
+            text_parse.add<uint16_t>("port", 16999);
+            text_parse.add<uint8_t>("type", 1);
+            text_parse.add("#maint", "Server is under maintenance. We will be back online shortly. Thank you for your patience!");
+            text_parse.add<uint8_t>("type2", 1);
+            text_parse.add("meta", "e4a8RCkV3YYd6hQwYtZeVVgd66juXERH");
+
+            res.set_content(fmt::format("{}\r\nRTENDMARKERBS1001\r\n", text_parse.get_all_raw()), "text/html");
+            return;
         });
 
         m_server->listen_after_bind();
