@@ -12,7 +12,7 @@ namespace item {
         bool load();
 
     public:
-        [[nodiscard]] std::size_t get_size() const { return m_items.size(); }
+        [[nodiscard]] std::size_t get_size() const { return m_size; }
         [[nodiscard]] std::vector<uint8_t> get_data() const { return m_data; }
         [[nodiscard]] uint32_t get_hash() const { return m_hash; }
 
