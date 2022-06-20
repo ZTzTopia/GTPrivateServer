@@ -8,10 +8,7 @@ namespace utils {
     class TextParse {
     public:
         TextParse() : m_data() {}
-        explicit TextParse(const std::string& string)
-        {
-            parse(string);
-        }
+        explicit TextParse(const std::string& string) { parse(string); }
         ~TextParse() = default;
 
         void parse(const std::string& string)

@@ -6,26 +6,26 @@
 #include "ResourceUtils.h"
 
 // You must SAFE_DELETE_ARRAY what it returns
-uint8_t *brotliCompressToMemory(const uint8_t *pInput, int sizeBytes, int *pSizeCompressedOut, int compressionQuality) {
-    if (pInput == nullptr || pSizeCompressedOut == nullptr || sizeBytes <= 0 || (compressionQuality < BROTLI_MIN_QUALITY || compressionQuality > BROTLI_MAX_QUALITY)) {
+uint8_t *brotliCompressToMemory(const uint8_t *pInput, std::size_t sizeBytes, std::size_t *pSizeCompressedOut, int compressionQuality) {
+    if (pInput == nullptr || pSizeCompressedOut == nullptr || sizeBytes <= 0 || compressionQuality > BROTLI_MAX_QUALITY) {
         return nullptr;
     }
 
     std::size_t sizeOut = BrotliEncoderMaxCompressedSize(sizeBytes);
     auto *pOut = new uint8_t[sizeOut];
 
-    BROTLI_BOOL ret = BrotliEncoderCompress(compressionQuality, BROTLI_DEFAULT_WINDOW, BROTLI_MODE_GENERIC, sizeBytes, pInput, &sizeOut, pOut);
+    BROTLI_BOOL ret = BrotliEncoderCompress(compressionQuality != -1 ?: BROTLI_DEFAULT_QUALITY, BROTLI_DEFAULT_WINDOW, BROTLI_DEFAULT_MODE, sizeBytes, pInput, &sizeOut, pOut);
     if (ret == false) {
         delete[] pOut;
         return nullptr;
     }
 
-    *pSizeCompressedOut = (int)sizeOut;
+    *pSizeCompressedOut = sizeOut;
     return pOut;
 }
 
 // You must SAFE_DELETE_ARRAY what it returns
-uint8_t *brotliDecompressToMemory(const uint8_t *pInput, int compressedSize, int decompressedSize) {
+uint8_t *brotliDecompressToMemory(const uint8_t *pInput, std::size_t compressedSize, std::size_t decompressedSize) {
     if (pInput == nullptr || compressedSize <= 0 || decompressedSize <= 0) {
         return nullptr;
     }
@@ -33,7 +33,7 @@ uint8_t *brotliDecompressToMemory(const uint8_t *pInput, int compressedSize, int
     auto *pDestBuff = new uint8_t[decompressedSize + 1]; // Room for extra null at the end;
 	pDestBuff[decompressedSize] = 0; // Add the extra null, if we decompressed a text file this can be useful
 
-    BrotliDecoderResult ret = BrotliDecoderDecompress(compressedSize, pInput, (std::size_t *)&decompressedSize, pDestBuff);
+    BrotliDecoderResult ret = BrotliDecoderDecompress(compressedSize, pInput, &decompressedSize, pDestBuff);
     if (ret != BROTLI_DECODER_RESULT_SUCCESS) {
         delete[] pDestBuff;
         return nullptr;
@@ -70,7 +70,7 @@ uint8_t *zlibDeflateToMemory(uint8_t *pInput, int sizeBytes, int *pSizeCompresse
 
 	// assert(ret == Z_STREAM_END);
 	deflateEnd(&strm);
-	*pSizeCompressedOut = (int)strm.total_out;
+	*pSizeCompressedOut = static_cast<int>(strm.total_out);
 	return pOut;
 }
 

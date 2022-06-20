@@ -39,16 +39,7 @@ namespace enetwrapper {
             m_service_thread.join();
         }
 
-        if (m_host) {
-            for (ENetPeer* current_peer = m_host->peers;
-                current_peer < &m_host->peers[m_host->peerCount];
-                ++current_peer)
-            {
-                if (current_peer) enet_peer_disconnect_now(current_peer, 0);
-            }
-
-            enet_host_destroy(m_host);
-        }
+        if (m_host) enet_host_destroy(m_host);
     }
 
     void ENetServer::start_service()

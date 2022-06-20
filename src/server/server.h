@@ -14,6 +14,11 @@ namespace server {
 
         bool start();
 
+    public:
+        void update_last_login();
+        void update_last_event();
+
+    public:
         void on_connect(ENetPeer* peer) override;
         void on_receive(ENetPeer* peer, ENetPacket* packet) override;
         void on_disconnect(ENetPeer* peer) override;
@@ -24,5 +29,8 @@ namespace server {
         std::shared_ptr<item::ItemDB> m_item_db;
         std::shared_ptr<event::EventPool> m_event_pool;
         std::shared_ptr<player::PlayerPool> m_player_pool;
+
+        std::chrono::time_point<std::chrono::high_resolution_clock> m_last_login_time;
+        uint32_t m_login_per_second;
     };
 }

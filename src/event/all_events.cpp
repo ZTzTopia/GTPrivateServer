@@ -6,9 +6,9 @@
 namespace event {
     void EventPool::load_events()
     {
-        on("quit", [](const EventContext& context) {});
-        on("requestedName", [](const EventContext& context) { requested_name::function(context); });
-        on("refresh_item_data", [](const EventContext& context) { refresh_item_data::function(context); });
-        on("enter_game", [](const EventContext& context) { enter_game::function(context); });
+        on("quit", [](const EventContext& ctx) { ctx.player->disconnect_later(); });
+        on("requestedName", [](const EventContext& ctx) { requested_name::function(ctx); });
+        on("refresh_item_data", [](const EventContext& ctx) { refresh_item_data::function(ctx); });
+        on("enter_game", [](const EventContext& ctx) { enter_game::function(ctx); });
     }
 }

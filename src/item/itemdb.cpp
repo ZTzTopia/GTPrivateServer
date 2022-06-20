@@ -17,7 +17,7 @@ namespace item {
 
     bool ItemDB::load()
     {
-        std::ifstream file{ "./items.dat", std::ifstream::in | std::ifstream::binary };
+        std::ifstream file{ "./cache/items.dat", std::ifstream::in | std::ifstream::binary };
         if (!file.is_open()) {
             return false;
         }
@@ -29,7 +29,7 @@ namespace item {
         file.read(reinterpret_cast<char*>(m_data.data()), static_cast<std::streamsize>(m_size));
         file.close();
 
-        m_hash = utils::proton_hash(reinterpret_cast<const char*>(m_data.data()), static_cast<uint32_t>(m_size));
+        m_hash = utils::hash::proton(reinterpret_cast<const char*>(m_data.data()), static_cast<uint32_t>(m_size));
 
         int compressed_size{};
         uint8_t* compressed_data{ zlibDeflateToMemory(m_data.data(), static_cast<int>(m_size), &compressed_size) };

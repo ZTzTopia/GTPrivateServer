@@ -4,7 +4,7 @@
 #include "../enetwrapper/enet_wrapper.h"
 
 namespace server {
-    Server::Server(std::shared_ptr<Config> config) : m_config{ std::move(config) }
+    Server::Server(std::shared_ptr<Config> config) : m_config{ std::move(config) }, m_login_per_second{ 0 }
     {
         m_http = std::make_unique<Http>(config);
         m_item_db = std::make_shared<item::ItemDB>();
@@ -15,12 +15,12 @@ namespace server {
     bool Server::start()
     {
         if (!m_http->listen("0.0.0.0", 443)) {
-            spdlog::error("Failed to listen on port 443");
+            spdlog::error("Failed to listen on port 443.");
             return false;
         }
 
         if (!m_item_db->load()) {
-            spdlog::error("Failed to load item database");
+            spdlog::error("Failed to load item database.");
             return false;
         }
 
@@ -29,7 +29,7 @@ namespace server {
             return false;
         }
 
-        if (!create_host(16999, 1)) {
+        if (!create_host(16999, 1 /* config max players - 4 */)) {
             spdlog::error("Failed to create ENet host.");
             return false;
         }
@@ -38,9 +38,22 @@ namespace server {
         return true;
     }
 
+    void Server::update_last_login()
+    {
+        std::chrono::time_point<std::chrono::high_resolution_clock> now{ std::chrono::high_resolution_clock::now() };
+        if (now - m_last_login_time > std::chrono::seconds(1)) {
+            m_login_per_second = 0;
+        }
+
+        m_last_login_time = std::chrono::high_resolution_clock::now();
+        m_login_per_second++;
+    }
+
     void Server::on_connect(ENetPeer* peer)
     {
         spdlog::info("New client connected to server! -> ({}:{} - {})", peer->address.host, peer->address.port, peer->connectID);
+
+        update_last_login();
 
         std::shared_ptr<player::Player> player{ m_player_pool->new_player(peer) };
         player->send_packet(player::NET_MESSAGE_SERVER_HELLO, "");
@@ -50,7 +63,20 @@ namespace server {
     {
         std::shared_ptr<player::Player> player = m_player_pool->get_player(peer->connectID);
         if (!player) {
-            enet_peer_disconnect_now(peer, 0);
+            player->send_log("Server requested you to re-login.");
+            player->disconnect_later();
+            return;
+        }
+
+        if (m_player_pool->get_player_count() > 32 /* config max players */) {
+            player->send_log("`4 SERVER OVERLOADED : ``Sorry, our servers are currently at max capacity with 32 online, please try again later. We are working to improve this!");
+            player->disconnect_later();
+            return;
+        }
+
+        if (m_login_per_second > 1 /* config max login per second */) {
+            player->send_log("`4OOPS: ``Too many people logging in at once. Please click `5CANCEL ``and try again in a few seconds.");
+            player->disconnect_later();
             return;
         }
 
@@ -82,6 +108,7 @@ namespace server {
     void Server::on_disconnect(ENetPeer* peer)
     {
         if (!peer->data) {
+            spdlog::info("Client disconnected from server! -> ({}:{} - null)", peer->address.host, peer->address.port);
             return;
         }
 
