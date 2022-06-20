@@ -34,7 +34,7 @@
 #ifndef HAS_MSGHDR_FLAGS
 #define HAS_MSGHDR_FLAGS 1
 #endif
-#if !defined(HAS_SOCKLEN_T) && !defined(__socklen_t_defined)
+#ifndef HAS_SOCKLEN_T
 #define HAS_SOCKLEN_T 1
 #endif
 #ifndef HAS_GETADDRINFO
@@ -51,6 +51,10 @@
 
 #ifdef HAS_POLL
 #include <poll.h>
+#endif
+
+#if !defined(HAS_SOCKLEN_T) && !defined(__socklen_t_defined)
+typedef int socklen_t;
 #endif
 
 #ifndef MSG_NOSIGNAL

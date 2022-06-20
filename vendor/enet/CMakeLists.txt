@@ -1,6 +1,12 @@
-cmake_minimum_required(VERSION 2.8.12...3.20)
-
+cmake_minimum_required(VERSION 2.8.12...3.23)
 project(enet)
+
+set(ENET_MAIN_PROJECT OFF)
+if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    set(ENET_MAIN_PROJECT ON)
+endif ()
+
+option(ENET_BUILD_SHARED "Build shared library" OFF)
 
 # The "configure" step.
 include(CheckFunctionExists)
@@ -79,16 +85,56 @@ set(SOURCE_FILES
     peer.c
     protocol.c
     unix.c
-    win32.c)
+    win32.c
+)
 
 source_group(include FILES ${INCLUDE_FILES})
 source_group(source FILES ${SOURCE_FILES})
 
-add_library(enet STATIC
-    ${INCLUDE_FILES}
-    ${SOURCE_FILES}
+if(ENET_BUILD_SHARED OR BUILD_SHARED_LIBS)
+    add_library(enet SHARED
+        ${INCLUDE_FILES}
+        ${SOURCE_FILES}
+    )
+else ()
+    add_library(enet STATIC
+        ${INCLUDE_FILES}
+        ${SOURCE_FILES}
+    )
+endif ()
+
+target_compile_definitions(enet PRIVATE _WINSOCK_DEPRECATED_NO_WARNINGS)
+
+if (ENET_BUILD_SHARED OR BUILD_SHARED_LIBS)
+    if (MSVC)
+        target_compile_definitions(enet
+            PRIVATE
+                ENET_DLL=1
+                ENET_BUILDING_LIB=1
+        )
+    endif()
+endif()
+
+target_include_directories(enet
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
 if (WIN32)
     target_link_libraries(enet PRIVATE winmm ws2_32)
 endif()
+
+# Install enet binary.
+if (ENET_MAIN_PROJECT)
+    include(GNUInstallDirs)
+
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+
+    install(TARGETS enet
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+endif ()

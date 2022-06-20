@@ -7,32 +7,34 @@
 
 // You must SAFE_DELETE_ARRAY what it returns
 uint8_t *brotliCompressToMemory(const uint8_t *pInput, int sizeBytes, int *pSizeCompressedOut, int compressionQuality) {
-    assert(sizeBytes > 0);
-    assert(pSizeCompressedOut != nullptr);
-
-    size_t compressedSize = BrotliEncoderMaxCompressedSize(sizeBytes);
-    auto *compressedData = new uint8_t[compressedSize];
-
-    BROTLI_BOOL success = BrotliEncoderCompress(compressionQuality, BROTLI_DEFAULT_WINDOW, BROTLI_MODE_GENERIC, sizeBytes, pInput, &compressedSize, compressedData);
-    if (!success) {
-        delete[] compressedData;
+    if (pInput == nullptr || pSizeCompressedOut == nullptr || sizeBytes <= 0 || (compressionQuality < BROTLI_MIN_QUALITY && compressionQuality > BROTLI_MAX_QUALITY)) {
         return nullptr;
     }
 
-    *pSizeCompressedOut = (int)compressedSize;
-    return compressedData;
+    size_t sizeOut = BrotliEncoderMaxCompressedSize(sizeBytes);
+    auto *pOut = new uint8_t[sizeOut];
+
+    BROTLI_BOOL ret = BrotliEncoderCompress(compressionQuality, BROTLI_DEFAULT_WINDOW, BROTLI_MODE_GENERIC, sizeBytes, pInput, &sizeOut, pOut);
+    if (ret == false) {
+        delete[] pOut;
+        return nullptr;
+    }
+
+    *pSizeCompressedOut = (int)sizeOut;
+    return pOut;
 }
 
 // You must SAFE_DELETE_ARRAY what it returns
 uint8_t *brotliDecompressToMemory(const uint8_t *pInput, int compressedSize, int decompressedSize) {
-    assert(compressedSize > 0);
-    assert(decompressedSize > 0);
+    if (pInput == nullptr || compressedSize <= 0 || decompressedSize <= 0) {
+        return nullptr;
+    }
 
     auto *pDestBuff = new uint8_t[decompressedSize + 1]; // Room for extra null at the end;
 	pDestBuff[decompressedSize] = 0; // Add the extra null, if we decompressed a text file this can be useful
 
-    BrotliDecoderResult decoder_result = BrotliDecoderDecompress(compressedSize, pInput, (size_t *)&decompressedSize, pDestBuff);
-    if (decoder_result != BROTLI_DECODER_RESULT_SUCCESS) {
+    BrotliDecoderResult ret = BrotliDecoderDecompress(compressedSize, pInput, (size_t *)&decompressedSize, pDestBuff);
+    if (ret != BROTLI_DECODER_RESULT_SUCCESS) {
         delete[] pDestBuff;
         return nullptr;
     }
