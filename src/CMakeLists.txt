@@ -31,8 +31,8 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC
     CPPHTTPLIB_OPENSSL_SUPPORT
     SPDLOG_FMT_EXTERNAL)
 
-# target_link_libraries(${PROJECT_NAME}
-    # enet
+target_link_libraries(${PROJECT_NAME}
+    enet)
     # argon2_cpp)
 
 # https://github.com/conan-io/conan-center-index/pull/10040

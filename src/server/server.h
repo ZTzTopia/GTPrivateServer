@@ -1,0 +1,22 @@
+#pragma once
+#include "http.h"
+#include "../config.h"
+#include "../enetwrapper/enet_server.h"
+
+namespace server {
+    class Server : public enetwrapper::ENetServer {
+    public:
+        explicit Server(std::shared_ptr<Config> config);
+        ~Server() = default;
+
+        bool start();
+
+        void on_connect(ENetPeer* peer) override;
+        void on_receive(ENetPeer* peer, ENetPacket* packet) override;
+        void on_disconnect(ENetPeer* peer) override;
+
+    private:
+        std::shared_ptr<Config> m_config;
+        std::shared_ptr<Http> m_http;
+    };
+}

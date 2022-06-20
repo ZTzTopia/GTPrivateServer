@@ -2,7 +2,7 @@
 
 #include "config.h"
 #include "logger/logger.h"
-#include "server/http.h"
+#include "server/server.h"
 
 int main(int argc, char *argv[])
 {
@@ -17,9 +17,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    auto http{ std::make_shared<server::Http>(config) };
-    if (!http->listen("0.0.0.0", 443)) {
-        spdlog::error("Failed to start HTTP server.");
+    auto server{ std::make_shared<server::Server>(config) };
+    if (!server->start()) {
+        spdlog::error("Failed to start server!");
         return 1;
     }
 
