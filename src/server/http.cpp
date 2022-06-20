@@ -26,9 +26,9 @@ namespace server {
         stop();
     }
 
-    void Http::bind_to_port(const std::string& host, int port)
+    bool Http::bind_to_port(const std::string& host, int port)
     {
-        m_server->bind_to_port(host.c_str(), port);
+        return m_server->bind_to_port(host.c_str(), port);
     }
 
     void Http::listen_after_bind()
@@ -36,10 +36,14 @@ namespace server {
         std::thread{ &Http::listen_internal, this }.detach();
     }
 
-    void Http::listen(const std::string& host, int port)
+    bool Http::listen(const std::string& host, int port)
     {
-        bind_to_port(host, port);
+        if (!bind_to_port(host, port)) {
+            return false;
+        }
+
         listen_after_bind();
+        return true;
     }
 
     void Http::stop()
