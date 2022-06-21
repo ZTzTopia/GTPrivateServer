@@ -12,9 +12,8 @@ namespace player {
 
     std::shared_ptr<Player> PlayerPool::new_player(ENetPeer* peer)
     {
-        auto player{ std::make_shared<Player>(peer) };
-        m_players[peer->connectID] = player;
-        return player;
+        m_players[peer->connectID] = std::make_shared<Player>(peer);
+        return m_players[peer->connectID];
     }
 
     void PlayerPool::remove_player(uint32_t connect_id)

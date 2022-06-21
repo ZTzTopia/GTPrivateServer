@@ -8,8 +8,9 @@ namespace server {
     {
         m_http = std::make_unique<Http>(config);
         m_item_db = std::make_shared<item::ItemDB>();
-        m_event_pool = std::make_unique<event::EventPool>();
-        m_player_pool = std::make_unique<player::PlayerPool>();
+        m_event_pool = std::make_shared<event::EventPool>();
+        m_player_pool = std::make_shared<player::PlayerPool>();
+        m_world_pool = std::make_shared<world::WorldPool>();
     }
 
     bool Server::start()
@@ -29,7 +30,7 @@ namespace server {
             return false;
         }
 
-        if (!create_host(16999, 1 /* config max players - 4 */)) {
+        if (!create_host(16999, 36 /* config max players + 4 */)) {
             spdlog::error("Failed to create ENet host.");
             return false;
         }
@@ -85,22 +86,26 @@ namespace server {
             case player::NET_MESSAGE_GENERIC_TEXT:
             case player::NET_MESSAGE_GAME_MESSAGE: {
                 event::EventContext ctx{};
+                ctx.text = player::get_text(packet);
                 ctx.player = player;
                 ctx.item_db = m_item_db;
+                ctx.world_pool = m_world_pool;
 
-                m_event_pool->try_find_and_fire_event(player::get_text(packet), ctx);
+                m_event_pool->try_find_and_fire_event(ctx.text, ctx);
                 break;
             }
             case player::NET_MESSAGE_GAME_PACKET: {
                 event::EventContext ctx{};
+                ctx.tank = player::get_struct(packet);
                 ctx.player = player;
                 ctx.item_db = m_item_db;
+                ctx.world_pool = m_world_pool;
 
-                m_event_pool->try_find_and_fire_event(std::to_string(player::get_struct(packet)->type), ctx);
+                m_event_pool->try_find_and_fire_event(std::to_string(ctx.tank->type), ctx);
                 break;
             }
             default:
-                spdlog::warn("Unknown message type: {}", type);
+                spdlog::warn("Unknown message type: {}.", type);
                 break;
         }
     }

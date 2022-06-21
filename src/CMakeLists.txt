@@ -1,9 +1,12 @@
+cmake_minimum_required(VERSION 3.0..3.23)
 project(Main LANGUAGES CXX)
 
 file(GLOB INCLUDE_FILES
     *.h
     **/*.h
+    **/*.hpp
     **/**/*.h
+    **/**/*.hpp
     ../vendor/proton/shared/*.h)
 
 file(GLOB SOURCE_FILES
@@ -50,6 +53,7 @@ conan_cmake_configure(REQUIRES
         brotli/1.0.9
         cpp-httplib/0.10.8
         fmt/8.1.1
+        glm/0.9.9.8
         libressl/3.5.3
         nlohmann_json/3.10.5
         spdlog/1.10.0
@@ -81,8 +85,11 @@ target_link_libraries(${PROJECT_NAME} httplib::httplib)
 find_package(fmt REQUIRED)
 target_link_libraries(${PROJECT_NAME} fmt::fmt)
 
+find_package(glm)
+target_link_libraries(${PROJECT_NAME} glm::glm)
+
 find_package(LibreSSL REQUIRED)
-target_link_libraries(${PROJECT_NAME} LibreSSL::Crypto LibreSSL::SSL LibreSSL::TLS)
+target_link_libraries(${PROJECT_NAME} LibreSSL::LibreSSL)
 
 find_package(nlohmann_json REQUIRED)
 target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json)

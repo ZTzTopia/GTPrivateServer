@@ -4,15 +4,21 @@
 #include <util/ResourceUtils.h>
 
 #include "itemdb.h"
-#include "../utils/binary_reader.h"
 #include "../utils/hash.h"
 
 namespace item {
-    ItemDB::ItemDB() : m_size{}, m_hash{} {}
+    ItemDB::ItemDB() : m_size{}, m_hash{}, m_compressed_size{}, m_version{}, m_item_count{} {}
 
     ItemDB::~ItemDB()
     {
         m_data.clear();
+        m_compressed_data.clear();
+
+        for (auto item : m_items) {
+            delete item;
+        }
+
+        m_items.clear();
     }
 
     bool ItemDB::load()
@@ -54,6 +60,7 @@ namespace item {
             }
         }
 
+        m_data.clear();
         return true;
     }
 }
