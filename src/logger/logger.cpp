@@ -1,4 +1,3 @@
-#include <iostream>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -20,7 +19,7 @@ namespace logger {
             spdlog::set_default_logger(combined_logger);
         }
         catch (const spdlog::spdlog_ex& ex) {
-            std::cout << "Log initialization failed: " << ex.what() << std::endl;
+            spdlog::error("Log initialization failed: {}", ex.what());
             return false;
         }
 

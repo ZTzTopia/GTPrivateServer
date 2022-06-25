@@ -13,7 +13,7 @@ namespace world {
         void generate();
 
         std::size_t calculate_memory_usage();
-        std::vector<uint8_t> pack_to_memory(std::size_t& size);
+        std::vector<uint8_t> pack_to_memory();
 
     private:
         uint16_t m_version;

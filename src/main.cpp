@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    spdlog::info("Starting Growtopia private server v{}...", "0.1.0");
+    spdlog::info("Starting Growtopia private server v{}...", GTPRIVATESERVER_VERSION);
 
     auto config{ std::make_shared<Config>() };
     if (!config->load("./config.json")) {

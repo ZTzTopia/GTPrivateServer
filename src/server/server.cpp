@@ -30,7 +30,7 @@ namespace server {
             return false;
         }
 
-        if (!create_host(16999, 36 /* config max players + 4 */)) {
+        if (!create_host(16999, m_config->m_server.max_players + 4)) {
             spdlog::error("Failed to create ENet host.");
             return false;
         }
@@ -69,13 +69,13 @@ namespace server {
             return;
         }
 
-        if (m_player_pool->get_player_count() > 32 /* config max players */) {
+        if (m_player_pool->get_player_count() > m_config->m_server.max_players) {
             player->send_log("`4 SERVER OVERLOADED : ``Sorry, our servers are currently at max capacity with 32 online, please try again later. We are working to improve this!");
             player->disconnect_later();
             return;
         }
 
-        if (m_login_per_second > 1 /* config max login per second */) {
+        if (m_login_per_second > m_config->m_server.login_per_second) {
             player->send_log("`4OOPS: ``Too many people logging in at once. Please click `5CANCEL ``and try again in a few seconds.");
             player->disconnect_later();
             return;

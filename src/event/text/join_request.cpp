@@ -27,14 +27,13 @@ namespace join_request {
             world = ctx.world_pool->new_world(world_name);
         }
 
-        std::size_t data_size{ 0 };
-        std::vector<uint8_t> data{ world->pack_to_memory(data_size) };
+        std::vector<uint8_t> data{ world->pack_to_memory() };
 
         player::GameUpdatePacket game_update_packet{};
         game_update_packet.type = player::PACKET_SEND_MAP_DATA;
         game_update_packet.net_id = -1;
         game_update_packet.flags |= player::ePacketFlag::PACKET_FLAG_EXTENDED;
-        game_update_packet.data_size = data_size;
+        game_update_packet.data_size = data.size();
         ctx.player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, &game_update_packet, sizeof(player::GameUpdatePacket), data.data());
 
         ctx.player->send_variant({

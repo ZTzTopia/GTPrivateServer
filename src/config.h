@@ -6,13 +6,13 @@
 
 class Config {
 public:
-    Config() : debug{ false }, dev{ false } {}
+    Config() : m_server{} {};
     ~Config() = default;
 
     void default_config()
     {
-        debug = true;
-        dev = false;
+        m_server.max_players = 32;
+        m_server.login_per_second = 1;
     }
 
     bool create(const std::string& file)
@@ -20,8 +20,10 @@ public:
         default_config();
 
         nlohmann::json j{};
-        j["debug"] = debug;
-        j["dev"] = dev;
+        j["server"] = {
+            { "max_players", m_server.max_players },
+            { "login_per_second", m_server.login_per_second }
+        };
 
         std::ofstream ofs{ file };
         if (!ofs.is_open()) {
@@ -46,8 +48,8 @@ public:
         ifs.close();
 
         try {
-            debug = j["debug"];
-            dev = j["dev"];
+            m_server.max_players = j["server"]["max_players"].get<uint16_t>();
+            m_server.login_per_second = j["server"]["login_per_second"].get<uint8_t>();
         }
         catch (const nlohmann::json::exception& ex) {
             spdlog::error("{}", ex.what());
@@ -58,6 +60,8 @@ public:
     }
 
 public:
-    bool debug;
-    bool dev;
+    struct {
+        uint16_t max_players;
+        uint8_t login_per_second;
+    } m_server;
 };

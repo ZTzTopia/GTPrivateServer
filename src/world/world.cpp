@@ -43,7 +43,7 @@ namespace world {
 
     std::size_t World::calculate_memory_usage()
     {
-        std::size_t size = sizeof(m_version);
+        std::size_t size{ sizeof(uint16_t) }; // version
         size += sizeof(uint32_t); // reserved
         size += sizeof(uint16_t); // name length
         size += m_name.length(); // name
@@ -62,7 +62,7 @@ namespace world {
         return size;
     }
 
-    std::vector<uint8_t> World::pack_to_memory(std::size_t& size)
+    std::vector<uint8_t> World::pack_to_memory()
     {
         std::vector<uint8_t> mem(calculate_memory_usage(), 0);
 
@@ -75,17 +75,14 @@ namespace world {
         writer.write_u32(m_tiles.size()); // tile count
 
         for (Tile* tile : m_tiles) {
-            std::size_t tile_size;
-            std::vector<uint8_t> data{ tile->pack_to_memory(tile_size) };
-            writer.write_bytes(data.data(), tile_size);
+            std::vector<uint8_t> data{ tile->pack_to_memory() };
+            writer.write_bytes(data.data(), data.size());
         }
 
         writer.write_u32(0); // object count
         writer.write_u32(0); // object last id
-        writer.write_u32(0); // unknown
-        writer.write_u32(0); // unknown
-
-        size = writer.position();
+        writer.write_u32(1); // unknown
+        writer.write_u32(1); // unknown
         return mem;
     }
 }
