@@ -36,20 +36,24 @@ namespace join_request {
         game_update_packet.data_size = data.size();
         ctx.player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, &game_update_packet, sizeof(player::GameUpdatePacket), data.data());
 
+        uint32_t net_id = world->add_player(ctx.player);
+        ctx.player->set_net_id(net_id);
+
         ctx.player->send_variant({
             "OnSpawn",
-            "spawn|avatar\n"
-            "netID|1\n"
-            "userID|1\n"
-            "colrect|0|0|20|30\n"
-            "posXY|32|32\n"
-            "name|ztz\n"
-            "country|us\n"
-            "invis|0\n"
-            "mstate|0\n"
-            "smstate|1\n"
-            "onlineID|\n"
-            "type|local\n"
+            fmt::format(
+                "spawn|avatar\n"
+                "netID|{}\n"
+                "userID|1\n"
+                "colrect|0|0|20|30\n"
+                "posXY|32|32\n"
+                "name|ztz\n"
+                "country|us\n"
+                "invis|0\n"
+                "mstate|0\n"
+                "smstate|1\n"
+                "onlineID|1\n"
+                "type|local\n", net_id)
         });
     }
 }

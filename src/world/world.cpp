@@ -3,7 +3,7 @@
 #include "../utils/random.h"
 
 namespace world {
-    World::World(std::string name) : m_version{ 20 }, m_name(std::move(name)) {}
+    World::World(std::string name) : m_version{ 20 }, m_name{ std::move(name) }, m_net_id{ 0 } {}
 
     void World::generate()
     {
@@ -84,5 +84,11 @@ namespace world {
         writer.write_u32(1); // unknown
         writer.write_u32(1); // unknown
         return mem;
+    }
+
+    uint32_t World::add_player(const std::shared_ptr<player::Player>& player)
+    {
+        m_players[m_net_id] = player;
+        return ++m_net_id;
     }
 }
