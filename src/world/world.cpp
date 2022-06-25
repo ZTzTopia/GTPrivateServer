@@ -91,4 +91,9 @@ namespace world {
         m_players[m_net_id] = player;
         return ++m_net_id;
     }
+
+    void World::remove_player(const std::shared_ptr<player::Player>& player)
+    {
+        m_players.erase(player->get_net_id());
+    }
 }

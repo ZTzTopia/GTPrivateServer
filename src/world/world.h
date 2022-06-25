@@ -18,6 +18,7 @@ namespace world {
         std::vector<uint8_t> pack_to_memory();
 
         uint32_t add_player(const std::shared_ptr<player::Player>& player);
+        void remove_player(const std::shared_ptr<player::Player>& player);
 
     private:
         uint16_t m_version;

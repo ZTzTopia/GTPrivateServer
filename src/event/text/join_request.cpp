@@ -37,6 +37,7 @@ namespace join_request {
         ctx.player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, &game_update_packet, sizeof(player::GameUpdatePacket), data.data());
 
         uint32_t net_id = world->add_player(ctx.player);
+        ctx.player->set_world(world_name);
         ctx.player->set_net_id(net_id);
 
         ctx.player->send_variant({
