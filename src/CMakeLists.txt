@@ -43,10 +43,6 @@ target_link_libraries(${PROJECT_NAME}
     enet)
     # argon2_cpp)
 
-# https://github.com/conan-io/conan-center-index/pull/10040
-execute_process(COMMAND conan create --build=missing --test-folder=None
-    ${CMAKE_CURRENT_SOURCE_DIR}/../conan/redis-plus-plus/all/conanfile.py redis-plus-plus/1.3.3@)
-
 # Install all needed packages.
 include(${CMAKE_CURRENT_SOURCE_DIR}/../conan/conan.cmake)
 
