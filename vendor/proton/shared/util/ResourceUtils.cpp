@@ -14,7 +14,7 @@ uint8_t *brotliCompressToMemory(const uint8_t *pInput, std::size_t sizeBytes, st
     std::size_t sizeOut = BrotliEncoderMaxCompressedSize(sizeBytes);
     auto *pOut = new uint8_t[sizeOut];
 
-    BROTLI_BOOL ret = BrotliEncoderCompress(compressionQuality != -1 ?: BROTLI_DEFAULT_QUALITY, BROTLI_DEFAULT_WINDOW, BROTLI_DEFAULT_MODE, sizeBytes, pInput, &sizeOut, pOut);
+    BROTLI_BOOL ret = BrotliEncoderCompress(compressionQuality != -1 ? compressionQuality : BROTLI_DEFAULT_QUALITY, BROTLI_DEFAULT_WINDOW, BROTLI_DEFAULT_MODE, sizeBytes, pInput, &sizeOut, pOut);
     if (ret == false) {
         delete[] pOut;
         return nullptr;
