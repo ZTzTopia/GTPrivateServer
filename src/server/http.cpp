@@ -28,6 +28,7 @@ namespace server {
 
     bool Http::bind_to_port(const std::string& host, int port)
     {
+        spdlog::info("HTTP(s) server listening on port {}.", port); // So we don't need to store port in a member variable.
         return m_server->bind_to_port(host.c_str(), port);
     }
 

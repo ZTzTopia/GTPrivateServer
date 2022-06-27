@@ -3,10 +3,7 @@
 #include "enet_server.h"
 
 namespace enetwrapper {
-    ENetServer::ENetServer() : m_host(nullptr)
-    {
-        m_running.store(false);
-    }
+    ENetServer::ENetServer() : m_host{ nullptr } {}
 
     ENetServer::~ENetServer()
     {

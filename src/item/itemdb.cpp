@@ -60,6 +60,8 @@ namespace item {
             }
         }
 
+        spdlog::info("Loaded {} items.", m_item_count);
+
         m_data.clear();
         return true;
     }

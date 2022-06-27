@@ -36,6 +36,8 @@ namespace server {
         }
 
         start_service();
+
+        spdlog::info("ENet server listening on port {}.", 16999);
         return true;
     }
 
