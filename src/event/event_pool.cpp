@@ -27,4 +27,12 @@ namespace event {
             spdlog::trace("Failed to call action event {}.", text_parse.get("action", 1));
         }
     }
+
+    void EventPool::try_find_and_fire_event(player::ePacketType packet_type, const EventContext& context)
+    {
+        spdlog::trace("Trying to call packet event {}.", magic_enum::enum_name(packet_type));
+        if (!emit(std::to_string(packet_type), context)) {
+            spdlog::trace("Failed to call packet event {}.", magic_enum::enum_name(packet_type));
+        }
+    }
 }

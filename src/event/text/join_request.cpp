@@ -33,7 +33,7 @@ namespace join_request {
         game_update_packet.type = player::PACKET_SEND_MAP_DATA;
         game_update_packet.net_id = -1;
         game_update_packet.flags |= player::ePacketFlag::PACKET_FLAG_EXTENDED;
-        game_update_packet.data_size = data.size();
+        game_update_packet.data_size = static_cast<uint32_t>(data.size());
         ctx.player->send_raw_packet(player::NET_MESSAGE_GAME_PACKET, &game_update_packet, sizeof(player::GameUpdatePacket), data.data());
 
         uint32_t net_id = world->add_player(ctx.player);

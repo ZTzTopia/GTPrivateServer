@@ -62,7 +62,7 @@ uint8_t *zlibDeflateToMemory(uint8_t *pInput, int sizeBytes, int *pSizeCompresse
 
 	strm.avail_in = sizeBytes;
 	strm.next_in = pInput;
-	strm.avail_out = sizeOut;
+	strm.avail_out = static_cast<uInt>(sizeOut);
 	strm.next_out = pOut;
 
 	ret = deflate(&strm, Z_FINISH);

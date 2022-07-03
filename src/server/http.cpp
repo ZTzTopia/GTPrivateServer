@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <thread>
 #include <spdlog/spdlog.h>
 
@@ -7,18 +8,20 @@
 namespace server {
     Http::Http(std::shared_ptr<Config> config) : m_config{ std::move(config) }
     {
-        std::ofstream cert_file{ "./cert.pem" };
+        std::string temp_dir{ "./temp" };
+        if (!std::filesystem::exists(temp_dir)) {
+            std::filesystem::create_directory(temp_dir);
+        }
+
+        std::ofstream cert_file{ "./temp/cert.pem" };
         cert_file << cert;
         cert_file.close();
 
-        std::ofstream key_file{ "./key.pem" };
+        std::ofstream key_file{ "./temp/key.pem" };
         key_file << key;
         key_file.close();
 
-        m_server = std::make_unique<httplib::SSLServer>("./cert.pem", "./key.pem");
-
-        std::remove("./cert.pem");
-        std::remove("./key.pem");
+        m_server = std::make_unique<httplib::SSLServer>("./temp/cert.pem", "./temp/key.pem");
     }
 
     Http::~Http()

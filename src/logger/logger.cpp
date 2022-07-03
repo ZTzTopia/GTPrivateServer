@@ -12,7 +12,7 @@ namespace logger {
             sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
             sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>("private_server.log", 1024 * 1024 * 5, 16));
 
-            std::shared_ptr<spdlog::logger> combined_logger{ std::make_shared<spdlog::logger>("GTPrivateServer", sinks.begin(), sinks.end()) };
+            auto combined_logger{ std::make_shared<spdlog::logger>("GTPrivateServer", sinks.begin(), sinks.end()) };
             combined_logger->set_level(spdlog::level::trace);
 
             spdlog::register_logger(combined_logger);

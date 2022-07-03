@@ -17,7 +17,7 @@ public:
 
     void write_string(const std::string& string)
     {
-        write_u16(string.length());
+        write_u16(static_cast<uint16_t>(string.length()));
         std::memcpy(m_data + m_pos, string.c_str(), string.length());
         m_pos += string.length();
     }

@@ -11,6 +11,7 @@ namespace server {
         m_event_pool = std::make_shared<event::EventPool>();
         m_player_pool = std::make_shared<player::PlayerPool>();
         m_world_pool = std::make_shared<world::WorldPool>();
+        m_postgres = std::make_shared<database::Postgres>();
     }
 
     bool Server::start()
@@ -22,6 +23,10 @@ namespace server {
 
         if (!m_item_db->load()) {
             spdlog::error("Failed to load item database.");
+            return false;
+        }
+
+        if (!m_postgres->connect("localhost", 5432)) {
             return false;
         }
 
@@ -67,19 +72,19 @@ namespace server {
         std::shared_ptr<player::Player> player = m_player_pool->get_player(peer->connectID);
         if (!player) {
             player->send_log("Server requested you to re-login.");
-            player->disconnect_later();
+            player->disconnect_now();
             return;
         }
 
         if (m_player_pool->get_player_count() > m_config->m_server.max_players) {
             player->send_log("`4 SERVER OVERLOADED : ``Sorry, our servers are currently at max capacity with 32 online, please try again later. We are working to improve this!");
-            player->disconnect_later();
+            player->disconnect_now();
             return;
         }
 
         if (m_login_per_second > m_config->m_server.login_per_second) {
             player->send_log("`4OOPS: ``Too many people logging in at once. Please click `5CANCEL ``and try again in a few seconds.");
-            player->disconnect_later();
+            player->disconnect_now();
             return;
         }
 
@@ -92,6 +97,12 @@ namespace server {
                 ctx.player = player;
                 ctx.item_db = m_item_db;
                 ctx.world_pool = m_world_pool;
+                ctx.postgres = m_postgres;
+
+                if (ctx.text.empty()) {
+                    spdlog::critical("Generic text or game message empty?");
+                    break;
+                }
 
                 m_event_pool->try_find_and_fire_event(ctx.text, ctx);
                 break;
@@ -102,8 +113,14 @@ namespace server {
                 ctx.player = player;
                 ctx.item_db = m_item_db;
                 ctx.world_pool = m_world_pool;
+                ctx.postgres = m_postgres;
 
-                m_event_pool->try_find_and_fire_event(std::to_string(ctx.tank->type), ctx);
+                if (ctx.tank == nullptr) {
+                    spdlog::critical("TankUpdatePacket null?");
+                    break;
+                }
+
+                m_event_pool->try_find_and_fire_event(ctx.tank->type, ctx);
                 break;
             }
             default:

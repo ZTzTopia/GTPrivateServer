@@ -5,7 +5,7 @@
 
 namespace enetwrapper {
     bool ENetWrapper::one_time_init() {
-        spdlog::info("Starting ENet v{}.{}.{}...", ENET_VERSION_MAJOR, ENET_VERSION_MINOR, ENET_VERSION_PATCH);
+        spdlog::info("Initialize ENet v{}.{}.{}...", ENET_VERSION_MAJOR, ENET_VERSION_MINOR, ENET_VERSION_PATCH);
 #ifdef _WIN32
         if (enet_initialize() != 0)
             return false;

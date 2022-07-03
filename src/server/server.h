@@ -1,6 +1,7 @@
 #pragma once
 #include "http.h"
 #include "../config.h"
+#include "../database/postgres.h"
 #include "../enetwrapper/enet_server.h"
 #include "../event/event_pool.h"
 #include "../item/itemdb.h"
@@ -30,6 +31,7 @@ namespace server {
         std::shared_ptr<event::EventPool> m_event_pool;
         std::shared_ptr<player::PlayerPool> m_player_pool;
         std::shared_ptr<world::WorldPool> m_world_pool;
+        std::shared_ptr<database::Postgres> m_postgres;
 
         std::chrono::time_point<std::chrono::high_resolution_clock> m_last_login_time;
         uint32_t m_login_per_second;

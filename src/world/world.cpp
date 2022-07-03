@@ -72,7 +72,7 @@ namespace world {
         writer.write_string(m_name);
         writer.write_u32(100); // width
         writer.write_u32(60); // height
-        writer.write_u32(m_tiles.size()); // tile count
+        writer.write_u32(static_cast<uint32_t>(m_tiles.size())); // tile count
 
         for (Tile* tile : m_tiles) {
             std::vector<uint8_t> data{ tile->pack_to_memory() };
